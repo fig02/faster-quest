@@ -2298,8 +2298,8 @@ void FileSelect_InitContext(GameState* thisx) {
 
     Letterbox_SetSizeTarget(0);
 
-    gSaveContext.skyboxTime = CLOCK_TIME(0, 0);
-    gSaveContext.save.dayTime = CLOCK_TIME(0, 0);
+    gSaveContext.skyboxTime = CLOCK_TIME(15, 0);
+    gSaveContext.save.dayTime = CLOCK_TIME(15, 0);
 
     Skybox_Init(&this->state, &this->skyboxCtx, SKYBOX_NORMAL_SKY);
 

@@ -839,6 +839,10 @@ beginseg
     include "$(BUILD_DIR)/src/libultra/mgu/mtxl2f.o"
 #endif
 #endif
+
+    // Faster Quest (FQ)
+#include "fq.inc"
+
 endseg
 
 beginseg
