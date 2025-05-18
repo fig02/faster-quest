@@ -31,7 +31,6 @@
 
 #include "assets/textures/nintendo_rogo_static/nintendo_rogo_static.h"
 
-#if DEBUG_FEATURES
 void ConsoleLogo_PrintBuildInfo(Gfx** gfxP) {
     Gfx* gfx;
     GfxPrint* printer;
@@ -41,19 +40,19 @@ void ConsoleLogo_PrintBuildInfo(Gfx** gfxP) {
     printer = alloca(sizeof(GfxPrint));
     GfxPrint_Init(printer);
     GfxPrint_Open(printer, gfx);
-    GfxPrint_SetColor(printer, 255, 155, 255, 255);
-    GfxPrint_SetPos(printer, 9, 21);
-    GfxPrint_Printf(printer, "NOT MARIO CLUB VERSION");
+
+    GfxPrint_SetColor(printer, 66, 135, 245, 255);
+    GfxPrint_SetPos(printer, 5, 24);
+    GfxPrint_Printf(printer, "github.com/fig02/faster-quest");
+
     GfxPrint_SetColor(printer, 255, 255, 255, 255);
-    GfxPrint_SetPos(printer, 7, 23);
-    GfxPrint_Printf(printer, "[Creator:%s]", gBuildCreator);
-    GfxPrint_SetPos(printer, 7, 24);
-    GfxPrint_Printf(printer, "[Date:%s]", gBuildDate);
+    GfxPrint_SetPos(printer, 5, 26);
+    GfxPrint_Printf(printer, "0.0.1");
+
     gfx = GfxPrint_Close(printer);
     GfxPrint_Destroy(printer);
     *gfxP = gfx;
 }
-#endif
 
 void ConsoleLogo_Calc(ConsoleLogoState* this) {
 #if !PLATFORM_GC
@@ -173,14 +172,12 @@ void ConsoleLogo_Main(GameState* thisx) {
     ConsoleLogo_Calc(this);
     ConsoleLogo_Draw(this);
 
-#if DEBUG_FEATURES
-    if (gIsCtrlr2Valid) {
+    {
         Gfx* gfx = POLY_OPA_DISP;
 
         ConsoleLogo_PrintBuildInfo(&gfx);
         POLY_OPA_DISP = gfx;
     }
-#endif
 
 #if PLATFORM_IQUE
     this->exit = true;
