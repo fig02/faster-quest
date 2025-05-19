@@ -7,6 +7,7 @@
 #include "controller.h"
 #include "fault.h"
 #include "file_select_state.h"
+#include "fq/cs.h"
 #include "gfx.h"
 #include "gfxalloc.h"
 #include "kaleido_manager.h"
@@ -293,7 +294,7 @@ void Play_Init(GameState* thisx) {
     s32 playerStartBgCamIndex;
     s32 i;
     u8 baseSceneLayer;
-    s32 pad[2];
+    CsHandlerEntry* fqCsEntry;
 
     if (gSaveContext.save.entranceIndex == ENTR_LOAD_OPENING) {
         gSaveContext.save.entranceIndex = 0;
@@ -370,7 +371,9 @@ void Play_Init(GameState* thisx) {
 
     Cutscene_HandleConditionalTriggers(this);
 
-    if (gSaveContext.gameMode != GAMEMODE_NORMAL || gSaveContext.save.cutsceneIndex >= 0xFFF0) {
+    fqCsEntry = FqCs_PreSceneOverride(this);
+
+    if (fqCsEntry == NULL && (gSaveContext.gameMode != GAMEMODE_NORMAL || gSaveContext.save.cutsceneIndex >= 0xFFF0)) {
         gSaveContext.nayrusLoveTimer = 0;
         Magic_Reset(this);
         gSaveContext.sceneLayer = SCENE_LAYER_CUTSCENE_FIRST + (gSaveContext.save.cutsceneIndex & 0xF);
@@ -530,6 +533,8 @@ void Play_Init(GameState* thisx) {
     AnimTaskQueue_Update(this, &this->animTaskQueue);
     gSaveContext.respawnFlag = 0;
 
+    FqCs_PostCsModifier(fqCsEntry, this, player);
+
 #if DEBUG_FEATURES
     if (R_USE_DEBUG_CUTSCENE) {
         static u64 sDebugCutsceneScriptBuf[0xA00];
@@ -556,6 +561,8 @@ void Play_Update(PlayState* this) {
         ZeldaArena_Display();
 #endif
     }
+
+    PRINTF("state:%d trigger:%d index:%d\n", this->csCtx.state, gSaveContext.cutsceneTrigger, gSaveContext.save.cutsceneIndex);
 
     if ((R_HREG_MODE == HREG_MODE_PRINT_OBJECT_TABLE) && (R_PRINT_OBJECT_TABLE_TRIGGER < 0)) {
         u32 i;
