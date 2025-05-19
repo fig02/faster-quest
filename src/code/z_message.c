@@ -2,6 +2,7 @@
 #include "array_count.h"
 #include "attributes.h"
 #include "controller.h"
+#include "fq/fq.h"
 #include "gfx.h"
 #include "gfx_setupdl.h"
 #include "gfxalloc.h"
@@ -343,22 +344,27 @@ void Message_UpdateOcarinaMemoryGame(PlayState* play) {
     Message_ResetOcarinaNoteState();
 }
 
+u8 MessageFq_QuickTextButtonCheck(Input* input) {
+    u16 buttons = gFQ.quickTextMode == QUICK_TEXT_HOLD ? input->cur.button : input->press.button;
+    return CHECK_BTN_ALL(buttons, BTN_B);
+}
+
 u8 Message_ShouldAdvance(PlayState* play) {
     Input* input = &play->state.input[0];
 
-    if (CHECK_BTN_ALL(input->press.button, BTN_A) || CHECK_BTN_ALL(input->press.button, BTN_B) ||
+    if (CHECK_BTN_ALL(input->press.button, BTN_A) || MessageFq_QuickTextButtonCheck(input) ||
         CHECK_BTN_ALL(input->press.button, BTN_CUP)) {
         Audio_PlaySfxGeneral(NA_SE_SY_MESSAGE_PASS, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
                              &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
     }
-    return CHECK_BTN_ALL(input->press.button, BTN_A) || CHECK_BTN_ALL(input->press.button, BTN_B) ||
+    return CHECK_BTN_ALL(input->press.button, BTN_A) || MessageFq_QuickTextButtonCheck(input) ||
            CHECK_BTN_ALL(input->press.button, BTN_CUP);
 }
 
 u8 Message_ShouldAdvanceSilent(PlayState* play) {
     Input* input = &play->state.input[0];
 
-    return CHECK_BTN_ALL(input->press.button, BTN_A) || CHECK_BTN_ALL(input->press.button, BTN_B) ||
+    return CHECK_BTN_ALL(input->press.button, BTN_A) || MessageFq_QuickTextButtonCheck(input) ||
            CHECK_BTN_ALL(input->press.button, BTN_CUP);
 }
 
@@ -1292,7 +1298,10 @@ void Message_DrawTextWide(PlayState* play, Gfx** gfxP) {
                 msgCtx->textDelay = MSG_BUF_DECODED_WIDE[++i];
                 break;
             case MESSAGE_WIDE_UNSKIPPABLE:
-                msgCtx->textUnskippable = true;
+                if (gFQ.quickTextMode == QUICK_TEXT_OFF) {
+                    // unskippable is only unskippable if quick text is off
+                    msgCtx->textUnskippable = true;
+                }
                 break;
             case MESSAGE_WIDE_TWO_CHOICE:
                 msgCtx->textboxEndType = TEXTBOX_ENDTYPE_2_CHOICE;
@@ -4344,8 +4353,8 @@ void Message_Update(PlayState* play) {
                 }
                 break;
             case MSGMODE_TEXT_DISPLAYING:
-                if (msgCtx->textBoxType != TEXTBOX_TYPE_NONE_BOTTOM && YREG(31) == 0 &&
-                    CHECK_BTN_ALL(input->press.button, BTN_B) && !msgCtx->textUnskippable) {
+                if (msgCtx->textBoxType != TEXTBOX_TYPE_NONE_BOTTOM && YREG(31) == 0 && !sTextboxSkipped &&
+                    MessageFq_QuickTextButtonCheck(input) && !msgCtx->textUnskippable) {
                     sTextboxSkipped = true;
                     msgCtx->textDrawPos = msgCtx->decodedTextLen;
                 }
