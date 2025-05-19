@@ -558,9 +558,6 @@ void Play_Update(PlayState* this) {
 #endif
     }
 
-    PRINTF("state:%d trigger:%d index:%d\n", this->csCtx.state, gSaveContext.cutsceneTrigger,
-           gSaveContext.save.cutsceneIndex);
-
     if ((R_HREG_MODE == HREG_MODE_PRINT_OBJECT_TABLE) && (R_PRINT_OBJECT_TABLE_TRIGGER < 0)) {
         u32 i;
         s32 pad2;

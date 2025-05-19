@@ -4,7 +4,7 @@
 #include "ultra64.h"
 
 typedef struct FasterQuestSettings {
-    u8 skip_intro;
+    u8 skipIntro;
 } FasterQuestSettings;
 
 extern FasterQuestSettings gFQ;

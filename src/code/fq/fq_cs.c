@@ -24,7 +24,7 @@ void FqCs_SetPlayerPosYaw(Player* player, f32 x, f32 y, f32 z, s16 yaw) {
 // ================= CALLBACKS
 
 s32 FqCs_IntroCheck(PlayState* play) {
-    return gFQ.skip_intro;
+    return gFQ.skipIntro;
 }
 
 void FqCs_IntroMod(PlayState* play, Player* player) {
