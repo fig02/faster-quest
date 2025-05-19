@@ -17,7 +17,7 @@ typedef struct CsHandlerEntry {
     CsModifier modifier; // if the cutscene is skipped, function runs to modify player and other game aspects
 } CsHandlerEntry;
 
-void FqCs_PreSceneOverride(PlayState* play);
-void FqCs_PostCsModifier(CsHandlerEntry* entry, PlayState* play, Player* player);
+s32 FqCs_PreSceneOverride(PlayState* play);
+void FqCs_Update(PlayState* play);
 
 #endif

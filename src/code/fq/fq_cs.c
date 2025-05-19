@@ -2,6 +2,8 @@
 #include "fq/fq.h"
 
 #include "array_count.h"
+#include "printf.h"
+#include "segmented_address.h"
 #include "z64camera.h"
 #include "z64play.h"
 #include "z64player.h"
@@ -31,77 +33,70 @@ void FqCs_IntroMod(PlayState* play, Player* player) {
     FqCs_SetPlayerPosYaw(player, 0, 0, 60, 0x8000);
 }
 
-void FqCs_SariaMod(PlayState* play, Player* player) {
-    
+void FqCs_SariaIntroMod(PlayState* play, Player* player) {
+    FqCs_SetPlayerPosYaw(player, -30.0f, 100.0f, 1025.0f, 0x8000);
 }
 
-// ================= TABLES
-
-#define SEARCH_MODE_PRE 0
-#define SEARCH_MODE_POST 1
-
-#define ENTRANCE_NONE -1
-#define CS_INDEX_NONE 0xFFFD
+// ================= TABLE
 
 static CsHandlerEntry gFQCsHandlers[] = {
     { ENTR_LINKS_HOUSE_0, 0xFFF1, NULL, FqCs_IntroCheck, FqCs_IntroMod },
-    { ENTRANCE_NONE, CS_INDEX_NONE, gKokiriForestSariaGreetingCs, NULL, FqCs_SariaMod },
+    { 0, 0, gKokiriForestSariaGreetingCs, NULL, FqCs_SariaIntroMod },
 };
 
-CsHandlerEntry* FqCs_FindEntry(s32 mode) {
-    s32 i;
-
-    for (i = 0; i < ARRAY_COUNT(gFQCsHandlers); i++) {
-        CsHandlerEntry* entry = &gFQCsHandlers[i];
-
-        switch (mode) {
-            case SEARCH_MODE_PRE:
-                break;
-
-            case SEARCH_MODE_POST:
-                break;
-        }
-    }
-}
+static CsHandlerEntry* sQueuedEntry = NULL;
 
 /**
  * This function runs early in the Play_Init process to override the scene layer if necessary.
  * It also sets cutsceneIndex to zero to skip the cutscene.
- * 
+ *
  * This only applies to scene layer cutscenes that start right away on scene load.
  */
-void FqCs_PreSceneOverride(PlayState* play) {
-    CsHandlerEntry* entry = FqCs_FindEntry();
-
-    if (entry != NULL) {
-        if (gSaveContext.save.entranceIndex == entry->entranceIndex && 
-            gSaveContext.save.cutsceneIndex == entry->cutsceneIndex &&
-            (entry->check == NULL || entry->check(play))) {
-            gSaveContext.save.cutsceneIndex = 0;
-        }
-    }
-}
-
-void FqCs_PostSceneOverride(PlayState* play) {
+s32 FqCs_PreSceneOverride(PlayState* play) {
     s32 i;
 
     for (i = 0; i < ARRAY_COUNT(gFQCsHandlers); i++) {
         CsHandlerEntry* entry = &gFQCsHandlers[i];
 
-        if (entry->cs != NULL && entry->cs == play->csCtx.script && 
-            (entry->check == NULL || entry->check(play))) {
+        if (gSaveContext.save.entranceIndex == entry->entranceIndex &&
+            gSaveContext.save.cutsceneIndex == entry->cutsceneIndex && (entry->check == NULL || entry->check(play))) {
             gSaveContext.save.cutsceneIndex = 0;
-            gSaveContext.cutsceneTrigger = 0;
+            sQueuedEntry = entry;
+
+            return true;
         }
     }
+
+    return false;
 }
 
 /**
- * Applies necessary modifications after a cutscene has been skipped.
+ * Runs every frame to either:
+ * - Process a queued entry that got detected during Play_Init
+ * - Catch a cutscene that started mid-gameplay
+ *
+ * This gets called just before `Cutscene_UpdateScripted` to prevent a
+ * cutscene from playing if necessary.
  */
-void FqCs_PostCsModifier(PlayState* play, Player* player) {
-    if (entry != NULL && entry->modifier != NULL) {
-        entry->modifier(play, player);
+void FqCs_Update(PlayState* play) {
+    Player* player = GET_PLAYER(play);
+    s32 i;
+
+    if (sQueuedEntry != NULL) {
+        // If there was a match in the PreSceneOverride check, it was saved in `sQueuedEntry`.
+        // This prevents having to search through the table again to find it.
+        sQueuedEntry->modifier(play, player);
+        sQueuedEntry = NULL;
+    } else if (gSaveContext.cutsceneTrigger != 0) {
+        // Only search the table if a "non scene layer" cutscene is playing.
+        for (i = 0; i < ARRAY_COUNT(gFQCsHandlers); i++) {
+            CsHandlerEntry* entry = &gFQCsHandlers[i];
+
+            if (play->csCtx.script == SEGMENTED_TO_VIRTUAL(entry->cs) && (entry->check == NULL || entry->check(play))) {
+                gSaveContext.save.cutsceneIndex = 0;
+                gSaveContext.cutsceneTrigger = 0;
+                entry->modifier(play, player);
+            }
+        }
     }
-    
 }

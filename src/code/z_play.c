@@ -294,7 +294,6 @@ void Play_Init(GameState* thisx) {
     s32 playerStartBgCamIndex;
     s32 i;
     u8 baseSceneLayer;
-    CsHandlerEntry* fqCsEntry;
 
     if (gSaveContext.save.entranceIndex == ENTR_LOAD_OPENING) {
         gSaveContext.save.entranceIndex = 0;
@@ -371,9 +370,8 @@ void Play_Init(GameState* thisx) {
 
     Cutscene_HandleConditionalTriggers(this);
 
-    fqCsEntry = FqCs_PreSceneOverride(this);
-
-    if (fqCsEntry == NULL && (gSaveContext.gameMode != GAMEMODE_NORMAL || gSaveContext.save.cutsceneIndex >= 0xFFF0)) {
+    if (!FqCs_PreSceneOverride(this) &&
+        (gSaveContext.gameMode != GAMEMODE_NORMAL || gSaveContext.save.cutsceneIndex >= 0xFFF0)) {
         gSaveContext.nayrusLoveTimer = 0;
         Magic_Reset(this);
         gSaveContext.sceneLayer = SCENE_LAYER_CUTSCENE_FIRST + (gSaveContext.save.cutsceneIndex & 0xF);
@@ -533,8 +531,6 @@ void Play_Init(GameState* thisx) {
     AnimTaskQueue_Update(this, &this->animTaskQueue);
     gSaveContext.respawnFlag = 0;
 
-    FqCs_PostCsModifier(fqCsEntry, this, player);
-
 #if DEBUG_FEATURES
     if (R_USE_DEBUG_CUTSCENE) {
         static u64 sDebugCutsceneScriptBuf[0xA00];
@@ -562,7 +558,8 @@ void Play_Update(PlayState* this) {
 #endif
     }
 
-    PRINTF("state:%d trigger:%d index:%d\n", this->csCtx.state, gSaveContext.cutsceneTrigger, gSaveContext.save.cutsceneIndex);
+    PRINTF("state:%d trigger:%d index:%d\n", this->csCtx.state, gSaveContext.cutsceneTrigger,
+           gSaveContext.save.cutsceneIndex);
 
     if ((R_HREG_MODE == HREG_MODE_PRINT_OBJECT_TABLE) && (R_PRINT_OBJECT_TABLE_TRIGGER < 0)) {
         u32 i;
@@ -1010,6 +1007,8 @@ void Play_Update(PlayState* this) {
                     if (!this->haltAllActors) {
                         Actor_UpdateAll(this, &this->actorCtx);
                     }
+
+                    FqCs_Update(this);
 
                     PLAY_LOG(3643);
                     Cutscene_UpdateManual(this, &this->csCtx);
