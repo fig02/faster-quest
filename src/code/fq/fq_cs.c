@@ -39,12 +39,16 @@ void FqCs_SariaIntroMod(PlayState* play, Player* player) {
 
 // ================= TABLE
 
+extern CutsceneData gAltKokiriForestSariaGreetingCs[];
+
 static CsHandlerEntry gFQCsHandlers[] = {
-    { ENTR_LINKS_HOUSE_0, 0xFFF1, NULL, FqCs_IntroCheck, FqCs_IntroMod },
-    { 0, 0, gKokiriForestSariaGreetingCs, NULL, FqCs_SariaIntroMod },
+    { ENTR_LINKS_HOUSE_0, 0xFFF1, NULL, NULL, FqCs_IntroCheck, FqCs_IntroMod },
+    { 0, 0, gKokiriForestSariaGreetingCs, gAltKokiriForestSariaGreetingCs, NULL, FqCs_SariaIntroMod },
 };
 
 static CsHandlerEntry* sQueuedEntry = NULL;
+
+#define FQ_SHOULD_SKIP_CS(entry) (gFQ.quickCsType == QUICK_CS_SKIP || (gFQ.quickCsType == QUICK_CS_SHORTEN && entry->alternateCs == NULL))
 
 /**
  * This function runs early in the Play_Init process to override the scene layer if necessary.
@@ -55,15 +59,21 @@ static CsHandlerEntry* sQueuedEntry = NULL;
 s32 FqCs_PreSceneOverride(PlayState* play) {
     s32 i;
 
+    if (gFQ.quickCsType == QUICK_CS_OFF) {
+        return false;
+    }
+
     for (i = 0; i < ARRAY_COUNT(gFQCsHandlers); i++) {
         CsHandlerEntry* entry = &gFQCsHandlers[i];
 
         if (gSaveContext.save.entranceIndex == entry->entranceIndex &&
             gSaveContext.save.cutsceneIndex == entry->cutsceneIndex && (entry->check == NULL || entry->check(play))) {
-            gSaveContext.save.cutsceneIndex = 0;
-            sQueuedEntry = entry;
-
-            return true;
+            if (FQ_SHOULD_SKIP_CS(entry)) {
+                gSaveContext.save.cutsceneIndex = 0;
+                sQueuedEntry = entry;
+    
+                return true;
+            }
         }
     }
 
@@ -82,20 +92,34 @@ void FqCs_Update(PlayState* play) {
     Player* player = GET_PLAYER(play);
     s32 i;
 
+    if (gFQ.quickCsType == QUICK_CS_OFF) {
+        return;
+    }
+
     if (sQueuedEntry != NULL) {
-        // If there was a match in the PreSceneOverride check, it was saved in `sQueuedEntry`.
-        // This prevents having to search through the table again to find it.
-        sQueuedEntry->modifier(play, player);
-        sQueuedEntry = NULL;
+        if (FQ_SHOULD_SKIP_CS(sQueuedEntry)) {
+            // If there was a match in the PreSceneOverride check, it was saved in `sQueuedEntry`.
+            // This prevents having to search through the table again to find it.
+            sQueuedEntry->modifier(play, player);
+            sQueuedEntry = NULL;
+        } else if (gFQ.quickCsType == QUICK_CS_SHORTEN) {
+            play->csCtx.script = SEGMENTED_TO_VIRTUAL(sQueuedEntry->alternateCs);
+        }
     } else if (gSaveContext.cutsceneTrigger != 0) {
         // Only search the table if a "non scene layer" cutscene is playing.
         for (i = 0; i < ARRAY_COUNT(gFQCsHandlers); i++) {
             CsHandlerEntry* entry = &gFQCsHandlers[i];
 
             if (play->csCtx.script == SEGMENTED_TO_VIRTUAL(entry->cs) && (entry->check == NULL || entry->check(play))) {
-                gSaveContext.save.cutsceneIndex = 0;
-                gSaveContext.cutsceneTrigger = 0;
-                entry->modifier(play, player);
+                if (FQ_SHOULD_SKIP_CS(entry)) {
+                    gSaveContext.save.cutsceneIndex = 0;
+                    gSaveContext.cutsceneTrigger = 0;
+                    entry->modifier(play, player);
+                } else if (gFQ.quickCsType == QUICK_CS_SHORTEN) {
+                    PRINTF("old cs %8X\n", play->csCtx.script);
+                    play->csCtx.script = SEGMENTED_TO_VIRTUAL(entry->alternateCs);
+                    PRINTF("new cs %8X\n", play->csCtx.script);
+                }
             }
         }
     }

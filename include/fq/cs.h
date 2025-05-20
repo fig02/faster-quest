@@ -13,6 +13,7 @@ typedef struct CsHandlerEntry {
     s32 entranceIndex;
     s32 cutsceneIndex;
     CutsceneData* cs; // optional, used to identify cutscenes that have no cs index
+    CutsceneData* alternateCs; // optional, alternate cs used for QUICK_CS_SHORTEN
     CsCheck check; // returns true if the cutscene should be skipped
     CsModifier modifier; // if the cutscene is skipped, function runs to modify player and other game aspects
 } CsHandlerEntry;
