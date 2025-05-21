@@ -2298,8 +2298,8 @@ void FileSelect_InitContext(GameState* thisx) {
 
     Letterbox_SetSizeTarget(0);
 
-    gSaveContext.skyboxTime = CLOCK_TIME(15, 0);
-    gSaveContext.save.dayTime = CLOCK_TIME(15, 0);
+    gSaveContext.skyboxTime = CLOCK_TIME(0, 0);
+    gSaveContext.save.dayTime = CLOCK_TIME(0, 0);
 
     Skybox_Init(&this->state, &this->skyboxCtx, SKYBOX_NORMAL_SKY);
 
@@ -2316,6 +2316,12 @@ void FileSelect_InitContext(GameState* thisx) {
     envCtx->changeLightNextConfig = 0;
     envCtx->lightSetting = 0;
     envCtx->skyboxConfig = 2;
+
+    // request dark sky
+    envCtx->changeSkyboxNextConfig = 1;
+    envCtx->changeSkyboxTimer = 200;
+    envCtx->changeSkyboxState = CHANGE_SKYBOX_REQUESTED;
+
     envCtx->skyboxDisabled = 0;
     envCtx->skyboxBlend = 0;
     envCtx->glareAlpha = 0.0f;

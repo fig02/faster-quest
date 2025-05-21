@@ -3,13 +3,14 @@
 
 #include "array_count.h"
 #include "printf.h"
+#include "sfx.h"
 #include "segmented_address.h"
+#include "z64actor.h"
 #include "z64camera.h"
 #include "z64play.h"
 #include "z64player.h"
 #include "z64save.h"
-
-#include "assets/scenes/overworld/spot04/spot04_scene.h"
+#include "z_actor_dlftbls.h"
 
 // ================= HELPERS
 
@@ -21,34 +22,63 @@ void FqCs_SetPlayerPosYaw(Player* player, f32 x, f32 y, f32 z, s16 yaw) {
     player->actor.world.rot.y = player->actor.shape.rot.y = yaw;
 }
 
-// ================= CALLBACKS
+// ================= SKIP CALLBACKS
 
-s32 FqCs_IntroCheck(PlayState* play) {
-    return gFQ.skipIntro;
-}
+// Flag to use in actors to force an actor to do something.
+s32 gFQCsCue = false;
 
-void FqCs_IntroMod(PlayState* play, Player* player) {
+void FqCs_IntroSkip(PlayState* play, Player* player) {
     play->viewpoint = VIEWPOINT_LOCKED;
     Camera_RequestBgCam(GET_ACTIVE_CAM(play), play->viewpoint - 1);
     FqCs_SetPlayerPosYaw(player, 0, 0, 60, 0x8000);
 }
 
-void FqCs_SariaIntroMod(PlayState* play, Player* player) {
+void FqCs_SariaIntroSkip(PlayState* play, Player* player) {
     FqCs_SetPlayerPosYaw(player, -30.0f, 100.0f, 1025.0f, 0x8000);
+}
+
+void FqCs_DekuTreeIntroSkip(PlayState* play, Player* player) {
+    Actor* treemouth = Actor_Find(&play->actorCtx, ACTOR_BG_TREEMOUTH, ACTORCAT_BG);
+    Audio_PlaySfxGeneral(NA_SE_EV_WOODDOOR_OPEN, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
+                         &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
+    gFQCsCue = true;
 }
 
 // ================= TABLE
 
+// scene cutscenes
+#include "assets/scenes/overworld/spot04/spot04_scene.h"
+#include "assets/scenes/indoors/link_home/link_home_scene.h"
+
+// actor cutscenes
+extern CutsceneData gDekuTreeMeetingCs[];
+
+// alternate cutscenes
 extern CutsceneData gAltKokiriForestSariaGreetingCs[];
 
+#define CMP_NONE -1
+#define ALT_CS_NONE NULL
+
 static CsHandlerEntry gFQCsHandlers[] = {
-    { ENTR_LINKS_HOUSE_0, 0xFFF1, NULL, NULL, FqCs_IntroCheck, FqCs_IntroMod },
-    { 0, 0, gKokiriForestSariaGreetingCs, gAltKokiriForestSariaGreetingCs, NULL, FqCs_SariaIntroMod },
+    { SCENE_LINKS_HOUSE, 0xFFF1, gLinkHouseIntroSleepCs, ALT_CS_NONE, FqCs_IntroSkip },
+    { SCENE_KOKIRI_FOREST, CMP_NONE, gKokiriForestSariaGreetingCs, ALT_CS_NONE, FqCs_SariaIntroSkip },
+    { SCENE_KOKIRI_FOREST, ACTOR_BG_TREEMOUTH, gDekuTreeMeetingCs, ALT_CS_NONE, FqCs_DekuTreeIntroSkip },
 };
 
 static CsHandlerEntry* sQueuedEntry = NULL;
 
-#define FQ_SHOULD_SKIP_CS(entry) (gFQ.quickCsType == QUICK_CS_SKIP || (gFQ.quickCsType == QUICK_CS_SHORTEN && entry->alternateCs == NULL))
+s32 FqCs_CheckSpecialCases(CsHandlerEntry* entry) {
+    if (entry->sceneId == SCENE_LINKS_HOUSE && entry->cmp == 0xFFF1) {
+        // Check FQ settings for intro skip
+        return gFQ.skipIntro;
+    }
+
+    // Default to skipping cutscene if there are no special cases
+    return true;
+}
+
+#define FQ_SHOULD_SKIP_CS(entry) \
+    (gFQ.quickCsType == QUICK_CS_SKIP || (gFQ.quickCsType == QUICK_CS_SHORTEN && entry->csAlt == NULL))
 
 /**
  * This function runs early in the Play_Init process to override the scene layer if necessary.
@@ -65,13 +95,15 @@ s32 FqCs_PreSceneOverride(PlayState* play) {
 
     for (i = 0; i < ARRAY_COUNT(gFQCsHandlers); i++) {
         CsHandlerEntry* entry = &gFQCsHandlers[i];
+        s8 sceneId = gEntranceTable[gSaveContext.save.entranceIndex].sceneId;
 
-        if (gSaveContext.save.entranceIndex == entry->entranceIndex &&
-            gSaveContext.save.cutsceneIndex == entry->cutsceneIndex && (entry->check == NULL || entry->check(play))) {
+        // We can safely assume that no cutscene at this point will come from an actor.
+        // Do not need to do actor relocation stuff.
+        if (entry->sceneId == sceneId && entry->cmp >= 0xFFF0 && entry->cmp == gSaveContext.save.cutsceneIndex &&
+            FqCs_CheckSpecialCases(entry)) {
             if (FQ_SHOULD_SKIP_CS(entry)) {
                 gSaveContext.save.cutsceneIndex = 0;
                 sQueuedEntry = entry;
-    
                 return true;
             }
         }
@@ -92,6 +124,9 @@ void FqCs_Update(PlayState* play) {
     Player* player = GET_PLAYER(play);
     s32 i;
 
+    // clear the force cue that may have been set on the last frame
+    gFQCsCue = false;
+
     if (gFQ.quickCsType == QUICK_CS_OFF) {
         return;
     }
@@ -100,25 +135,36 @@ void FqCs_Update(PlayState* play) {
         if (FQ_SHOULD_SKIP_CS(sQueuedEntry)) {
             // If there was a match in the PreSceneOverride check, it was saved in `sQueuedEntry`.
             // This prevents having to search through the table again to find it.
-            sQueuedEntry->modifier(play, player);
+            sQueuedEntry->skipFunc(play, player);
             sQueuedEntry = NULL;
         } else if (gFQ.quickCsType == QUICK_CS_SHORTEN) {
-            play->csCtx.script = SEGMENTED_TO_VIRTUAL(sQueuedEntry->alternateCs);
+            play->csCtx.script = SEGMENTED_TO_VIRTUAL(sQueuedEntry->csAlt);
         }
     } else if (gSaveContext.cutsceneTrigger != 0) {
         // Only search the table if a "non scene layer" cutscene is playing.
         for (i = 0; i < ARRAY_COUNT(gFQCsHandlers); i++) {
             CsHandlerEntry* entry = &gFQCsHandlers[i];
+            void* script;
 
-            if (play->csCtx.script == SEGMENTED_TO_VIRTUAL(entry->cs) && (entry->check == NULL || entry->check(play))) {
+            if (entry->cmp == CMP_NONE) {
+                // cutscene is located in the scene, dont need to relocate
+                script = SEGMENTED_TO_VIRTUAL(entry->cs);
+            } else if (entry->cmp < 0xFFF0) {
+                // relocate script pointer for actor, if needed
+                ActorOverlay* ovlEntry = &gActorOverlayTable[entry->cmp];
+                script = (void*)((u32)entry->cs - (u32)ovlEntry->vramStart + (u32)ovlEntry->loadedRamAddr);
+            } else {
+                // scene layer script, move on
+                continue;
+            }
+
+            if (play->csCtx.script == script) {
                 if (FQ_SHOULD_SKIP_CS(entry)) {
                     gSaveContext.save.cutsceneIndex = 0;
                     gSaveContext.cutsceneTrigger = 0;
-                    entry->modifier(play, player);
+                    entry->skipFunc(play, player);
                 } else if (gFQ.quickCsType == QUICK_CS_SHORTEN) {
-                    PRINTF("old cs %8X\n", play->csCtx.script);
-                    play->csCtx.script = SEGMENTED_TO_VIRTUAL(entry->alternateCs);
-                    PRINTF("new cs %8X\n", play->csCtx.script);
+                    play->csCtx.script = SEGMENTED_TO_VIRTUAL(entry->csAlt);
                 }
             }
         }

@@ -19,6 +19,8 @@
 #include "z64player.h"
 #include "z64save.h"
 
+#include "fq/cs.h"
+
 #include "assets/objects/object_spot04_objects/object_spot04_objects.h"
 
 #define FLAGS (ACTOR_FLAG_UPDATE_CULLING_DISABLED | ACTOR_FLAG_DRAW_CULLING_DISABLED)
@@ -177,6 +179,11 @@ void func_808BC8B8(BgTreemouth* this, PlayState* play) {
 
 void func_808BC9EC(BgTreemouth* this, PlayState* play) {
     Player* player = GET_PLAYER(play);
+
+    if (gFQCsCue) {
+        // cutscene was skipped, go straight to mouth opening
+        BgTreemouth_SetupAction(this, func_808BC6F8);
+    }
 
     if (play->csCtx.state == CS_STATE_STOP) {
         if (Actor_IsFacingAndNearPlayer(&this->dyna.actor, 350.0f, 0x7530)) {
