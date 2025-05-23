@@ -345,7 +345,7 @@ void Message_UpdateOcarinaMemoryGame(PlayState* play) {
 }
 
 u8 MessageFq_QuickTextButtonCheck(Input* input) {
-    u16 buttons = gFQ.quickTextMode == QUICK_TEXT_HOLD ? input->cur.button : input->press.button;
+    u16 buttons = gFQ.cfg.quickTextMode == QUICK_TEXT_HOLD ? input->cur.button : input->press.button;
     return CHECK_BTN_ALL(buttons, BTN_B);
 }
 
@@ -1298,7 +1298,7 @@ void Message_DrawTextWide(PlayState* play, Gfx** gfxP) {
                 msgCtx->textDelay = MSG_BUF_DECODED_WIDE[++i];
                 break;
             case MESSAGE_WIDE_UNSKIPPABLE:
-                if (gFQ.quickTextMode == QUICK_TEXT_OFF) {
+                if (gFQ.cfg.quickTextMode == QUICK_TEXT_OFF) {
                     // unskippable is only unskippable if quick text is off
                     msgCtx->textUnskippable = true;
                 }

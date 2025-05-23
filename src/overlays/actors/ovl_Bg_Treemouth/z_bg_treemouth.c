@@ -19,7 +19,7 @@
 #include "z64player.h"
 #include "z64save.h"
 
-#include "fq/cs.h"
+#include "fq/fq.h"
 
 #include "assets/objects/object_spot04_objects/object_spot04_objects.h"
 
@@ -180,7 +180,7 @@ void func_808BC8B8(BgTreemouth* this, PlayState* play) {
 void func_808BC9EC(BgTreemouth* this, PlayState* play) {
     Player* player = GET_PLAYER(play);
 
-    if (gFQCsCue) {
+    if (gFQ.cs.cue) {
         // cutscene was skipped, go straight to mouth opening
         BgTreemouth_SetupAction(this, func_808BC6F8);
     }

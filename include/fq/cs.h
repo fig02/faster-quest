@@ -19,6 +19,4 @@ typedef struct CsHandlerEntry {
 s32 FqCs_PreSceneOverride(PlayState* play);
 void FqCs_Update(PlayState* play);
 
-extern s32 gFQCsCue;
-
 #endif

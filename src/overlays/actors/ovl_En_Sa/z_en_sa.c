@@ -519,7 +519,7 @@ void EnSa_Init(Actor* thisx, PlayState* play) {
             this->actor.gravity = -1.0f;
             play->csCtx.script = SEGMENTED_TO_VIRTUAL(gKokiriForestSariaGreetingCs);
             gSaveContext.cutsceneTrigger = 1;
-            EnSa_ChangeAnim(this, ENSA_ANIM1_4);
+            Animation_PlayLoop(&this->skelAnime, &gSariaRunAnim); // (fq) changed anim to run anim to fix morph issues
             this->actionFunc = func_80AF68E4;
             break;
         case 3:

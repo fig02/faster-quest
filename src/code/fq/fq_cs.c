@@ -14,34 +14,44 @@
 
 // ================= HELPERS
 
-void FqCs_SetPlayerPosYaw(Player* player, f32 x, f32 y, f32 z, s16 yaw) {
+void FqCs_SkipTitleCard(PlayState* play) {
+    play->actorCtx.titleCtx.alpha = 0;
+    play->actorCtx.titleCtx.durationTimer = 0;
+    play->actorCtx.titleCtx.delayTimer = 0;
+}
+
+void FqCs_SetPlayerPosYaw(Player* player, f32 x, f32 y, f32 z, s16 yaw, u8 setNavi) {
     player->actor.world.pos.x = player->actor.home.pos.x = x;
     player->actor.world.pos.y = player->actor.home.pos.x = y;
     player->actor.world.pos.z = player->actor.home.pos.x = z;
 
     player->actor.world.rot.y = player->actor.shape.rot.y = yaw;
+
+    if (setNavi) {
+        Actor* navi = player->naviActor;
+
+        navi->world = player->actor.world;
+        navi->shape.rot.y = navi->world.rot.y;
+    }
 }
 
 // ================= SKIP CALLBACKS
 
-// Flag to use in actors to force an actor to do something.
-s32 gFQCsCue = false;
-
 void FqCs_IntroSkip(PlayState* play, Player* player) {
     play->viewpoint = VIEWPOINT_LOCKED;
     Camera_RequestBgCam(GET_ACTIVE_CAM(play), play->viewpoint - 1);
-    FqCs_SetPlayerPosYaw(player, 0, 0, 60, 0x8000);
+    FqCs_SetPlayerPosYaw(player, 0, 0, 60, 0x8000, true);
 }
 
 void FqCs_SariaIntroSkip(PlayState* play, Player* player) {
-    FqCs_SetPlayerPosYaw(player, -30.0f, 100.0f, 1025.0f, 0x8000);
+    FqCs_SetPlayerPosYaw(player, -30.0f, 100.0f, 1025.0f, 0x8000, true);
 }
 
 void FqCs_DekuTreeIntroSkip(PlayState* play, Player* player) {
     Actor* treemouth = Actor_Find(&play->actorCtx, ACTOR_BG_TREEMOUTH, ACTORCAT_BG);
     Audio_PlaySfxGeneral(NA_SE_EV_WOODDOOR_OPEN, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
                          &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
-    gFQCsCue = true;
+    gFQ.cs.cue = true;
 }
 
 // ================= TABLE
@@ -50,18 +60,19 @@ void FqCs_DekuTreeIntroSkip(PlayState* play, Player* player) {
 #include "assets/scenes/overworld/spot04/spot04_scene.h"
 #include "assets/scenes/indoors/link_home/link_home_scene.h"
 
+// alternate cutscenes
+#include "assets/scenes/kokiri_forest/kokiri_forest.h"
+
 // actor cutscenes
 extern CutsceneData gDekuTreeMeetingCs[];
-
-// alternate cutscenes
-extern CutsceneData gAltKokiriForestSariaGreetingCs[];
 
 #define CMP_NONE -1
 #define ALT_CS_NONE NULL
 
 static CsHandlerEntry gFQCsHandlers[] = {
     { SCENE_LINKS_HOUSE, 0xFFF1, gLinkHouseIntroSleepCs, ALT_CS_NONE, FqCs_IntroSkip },
-    { SCENE_KOKIRI_FOREST, CMP_NONE, gKokiriForestSariaGreetingCs, ALT_CS_NONE, FqCs_SariaIntroSkip },
+    { SCENE_KOKIRI_FOREST, CMP_NONE, gKokiriForestSariaGreetingCs, gFastKokiriForestSariaGreetingCs,
+      FqCs_SariaIntroSkip },
     { SCENE_KOKIRI_FOREST, ACTOR_BG_TREEMOUTH, gDekuTreeMeetingCs, ALT_CS_NONE, FqCs_DekuTreeIntroSkip },
 };
 
@@ -70,7 +81,7 @@ static CsHandlerEntry* sQueuedEntry = NULL;
 s32 FqCs_CheckSpecialCases(CsHandlerEntry* entry) {
     if (entry->sceneId == SCENE_LINKS_HOUSE && entry->cmp == 0xFFF1) {
         // Check FQ settings for intro skip
-        return gFQ.skipIntro;
+        return gFQ.cfg.skipIntro;
     }
 
     // Default to skipping cutscene if there are no special cases
@@ -78,7 +89,7 @@ s32 FqCs_CheckSpecialCases(CsHandlerEntry* entry) {
 }
 
 #define FQ_SHOULD_SKIP_CS(entry) \
-    (gFQ.quickCsType == QUICK_CS_SKIP || (gFQ.quickCsType == QUICK_CS_SHORTEN && entry->csAlt == NULL))
+    (gFQ.cfg.quickCsType == QUICK_CS_SKIP || (gFQ.cfg.quickCsType == QUICK_CS_SHORTEN && entry->csAlt == NULL))
 
 /**
  * This function runs early in the Play_Init process to override the scene layer if necessary.
@@ -89,7 +100,7 @@ s32 FqCs_CheckSpecialCases(CsHandlerEntry* entry) {
 s32 FqCs_PreSceneOverride(PlayState* play) {
     s32 i;
 
-    if (gFQ.quickCsType == QUICK_CS_OFF) {
+    if (gFQ.cfg.quickCsType == QUICK_CS_OFF) {
         return false;
     }
 
@@ -125,19 +136,21 @@ void FqCs_Update(PlayState* play) {
     s32 i;
 
     // clear the force cue that may have been set on the last frame
-    gFQCsCue = false;
+    gFQ.cs.cue = false;
 
-    if (gFQ.quickCsType == QUICK_CS_OFF) {
+    if (gFQ.cfg.quickCsType == QUICK_CS_OFF) {
         return;
     }
 
     if (sQueuedEntry != NULL) {
+        FqCs_SkipTitleCard(play);
+
         if (FQ_SHOULD_SKIP_CS(sQueuedEntry)) {
             // If there was a match in the PreSceneOverride check, it was saved in `sQueuedEntry`.
             // This prevents having to search through the table again to find it.
             sQueuedEntry->skipFunc(play, player);
             sQueuedEntry = NULL;
-        } else if (gFQ.quickCsType == QUICK_CS_SHORTEN) {
+        } else if (gFQ.cfg.quickCsType == QUICK_CS_SHORTEN) {
             play->csCtx.script = SEGMENTED_TO_VIRTUAL(sQueuedEntry->csAlt);
         }
     } else if (gSaveContext.cutsceneTrigger != 0) {
@@ -159,11 +172,13 @@ void FqCs_Update(PlayState* play) {
             }
 
             if (play->csCtx.script == script) {
+                FqCs_SkipTitleCard(play);
+
                 if (FQ_SHOULD_SKIP_CS(entry)) {
                     gSaveContext.save.cutsceneIndex = 0;
                     gSaveContext.cutsceneTrigger = 0;
                     entry->skipFunc(play, player);
-                } else if (gFQ.quickCsType == QUICK_CS_SHORTEN) {
+                } else if (gFQ.cfg.quickCsType == QUICK_CS_SHORTEN) {
                     play->csCtx.script = SEGMENTED_TO_VIRTUAL(entry->csAlt);
                 }
             }

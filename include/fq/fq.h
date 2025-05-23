@@ -21,6 +21,17 @@ typedef struct FasterQuestSettings {
     u8 quickCsType;
 } FasterQuestSettings;
 
-extern FasterQuestSettings gFQ;
+typedef struct FasterQuestCsSystem {
+    u8 cue; // custom cs que flag. Makes an actor do something FQ specific. Cleared every frame.
+} FasterQuestCsSystem;
+
+typedef struct FasterQuest {
+    FasterQuestSettings cfg;
+    FasterQuestCsSystem cs;
+} FasterQuest;
+
+void FasterQuest_Init(void);
+
+extern FasterQuest gFQ;
 
 #endif

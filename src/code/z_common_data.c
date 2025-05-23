@@ -7,6 +7,8 @@
 #include "z64save.h"
 #include "z64transition.h"
 
+#include "fq/fq.h"
+
 #pragma increment_block_number "gc-eu:192 gc-eu-mq:192 gc-jp:192 gc-jp-ce:192 gc-jp-mq:192 gc-us:192 gc-us-mq:192" \
                                "ntsc-1.0:0 ntsc-1.1:0 ntsc-1.2:0 pal-1.0:0 pal-1.1:0"
 
@@ -45,4 +47,6 @@ void SaveContext_Init(void) {
 #elif OOT_VERSION == GC_JP_CE
     gSaveContext.language = LANGUAGE_JPN;
 #endif
+
+    FasterQuest_Init();
 }
