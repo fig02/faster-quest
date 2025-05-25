@@ -71,7 +71,7 @@ extern CutsceneData gDekuTreeMeetingCs[];
 
 static CsHandlerEntry gFQCsHandlers[] = {
     { SCENE_LINKS_HOUSE, 0xFFF1, gLinkHouseIntroSleepCs, ALT_CS_NONE, FqCs_IntroSkip },
-    { SCENE_KOKIRI_FOREST, CMP_NONE, gKokiriForestSariaGreetingCs, gFastKokiriForestSariaGreetingCs,
+    { SCENE_KOKIRI_FOREST, CMP_NONE, gKokiriForestSariaGreetingCs, gAltKokiriForestSariaGreetingCs,
       FqCs_SariaIntroSkip },
     { SCENE_KOKIRI_FOREST, ACTOR_BG_TREEMOUTH, gDekuTreeMeetingCs, ALT_CS_NONE, FqCs_DekuTreeIntroSkip },
 };

@@ -9,6 +9,6 @@
 #include "z64ocarina.h"
 #include "z64player.h"
 
-extern CutsceneData gFastKokiriForestSariaGreetingCs[];
+extern CutsceneData gAltKokiriForestSariaGreetingCs[];
 
 #endif

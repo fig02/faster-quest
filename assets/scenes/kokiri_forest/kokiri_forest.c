@@ -1,6 +1,6 @@
 #include "kokiri_forest.h"
 
-CutsceneData gFastKokiriForestSariaGreetingCs[] = {
+CutsceneData gAltKokiriForestSariaGreetingCs[] = {
     CS_HEADER(6, 3000),
         CS_TEXT_LIST(2),
             CS_TEXT_NONE(0, 50),
