@@ -12,7 +12,7 @@ typedef struct CsHandlerEntry {
     s8 sceneId;
     s32 cmp; // this can be either a cutscene index, actor id, or neither
     CutsceneData* cs; // optional, used to identify cutscenes that have no cs index
-    CutsceneData* csAlt; // optional, alternate cs used for QUICK_CS_SHORTEN
+    CutsceneData* csAlt; // optional, alternate cutscene to play instead
     CsSkipCallback skipFunc; // if the cutscene is skipped, function runs to modify player and other game aspects
 } CsHandlerEntry;
 

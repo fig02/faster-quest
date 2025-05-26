@@ -73,7 +73,8 @@ void DebugFq_PrintLinkInfo(PlayState* play) {
         Player* player = GET_PLAYER(play);
         PosRot* world = &player->actor.world;
 
-        PRINTF("%f %f %f %4X room:%d\n", world->pos.x, world->pos.y, world->pos.z, world->rot.y, play->roomCtx.curRoom.num);
+        PRINTF("%f %f %f %4X room:%d\n", world->pos.x, world->pos.y, world->pos.z, world->rot.y,
+               play->roomCtx.curRoom.num);
     }
 }
 

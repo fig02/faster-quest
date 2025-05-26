@@ -153,14 +153,12 @@ void func_808BC864(BgTreemouth* this, PlayState* play) {
 }
 
 void FqTreeMouth_CutsceneHandler(BgTreemouth* this, PlayState* play) {
-    if (gFQ.cfg.quickCsType == QUICK_CS_OFF) {
-        BgTreemouth_SetupAction(this, func_808BC9EC);
-    } else {
+    if (play->csCtx.state != CS_STATE_IDLE) {
         CsCmdActorCue* cue = play->csCtx.actorCues[0];
 
-        if (gFQ.cfg.quickCsType == QUICK_CS_SKIP || (cue != NULL && cue->id == 3)) {
+        if ((cue != NULL && cue->id == 3)) {
             Audio_PlaySfxGeneral(NA_SE_EV_WOODDOOR_OPEN, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
-                                &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
+                                 &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
             BgTreemouth_SetupAction(this, func_808BC6F8);
         }
     }
