@@ -151,7 +151,7 @@ void func_808BC864(BgTreemouth* this, PlayState* play) {
         BgTreemouth_SetupAction(this, func_808BC65C);
     }
 }
-
+#include "printf.h"
 void func_808BC8B8(BgTreemouth* this, PlayState* play) {
     if (!Flags_GetEventChkInf(EVENTCHKINF_05) || LINK_IS_ADULT) {
         if (!LINK_IS_ADULT) {
@@ -166,6 +166,7 @@ void func_808BC8B8(BgTreemouth* this, PlayState* play) {
                     }
                 }
             } else if (Actor_IsFacingAndNearPlayer(&this->dyna.actor, 1658.0f, 0x4E20)) {
+                PRINTF("!!!!! TREE MOUTH DIST %f\n", this->dyna.actor.xzDistToPlayer);
                 Flags_SetEventChkInf(EVENTCHKINF_0C);
                 play->csCtx.script = gDekuTreeMeetingCs;
                 gSaveContext.cutsceneTrigger = 1;

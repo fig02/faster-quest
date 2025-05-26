@@ -1,4 +1,4 @@
-#include "kokiri_forest.h"
+#include "saria_greeting.h"
 
 CutsceneData gAltKokiriForestSariaGreetingCs[] = {
     CS_HEADER(6, 3000),

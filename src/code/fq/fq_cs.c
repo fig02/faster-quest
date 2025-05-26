@@ -61,7 +61,8 @@ void FqCs_DekuTreeIntroSkip(PlayState* play, Player* player) {
 #include "assets/scenes/indoors/link_home/link_home_scene.h"
 
 // alternate cutscenes
-#include "assets/scenes/kokiri_forest/kokiri_forest.h"
+#include "assets/scenes/kokiri_forest/saria_greeting.h"
+#include "assets/scenes/kokiri_forest/dekutree_intro.h"
 
 // actor cutscenes
 extern CutsceneData gDekuTreeMeetingCs[];
@@ -69,12 +70,13 @@ extern CutsceneData gDekuTreeMeetingCs[];
 #define CMP_NONE -1
 #define ALT_CS_NONE NULL
 
+// clang-format off
 static CsHandlerEntry gFQCsHandlers[] = {
     { SCENE_LINKS_HOUSE, 0xFFF1, gLinkHouseIntroSleepCs, ALT_CS_NONE, FqCs_IntroSkip },
-    { SCENE_KOKIRI_FOREST, CMP_NONE, gKokiriForestSariaGreetingCs, gAltKokiriForestSariaGreetingCs,
-      FqCs_SariaIntroSkip },
-    { SCENE_KOKIRI_FOREST, ACTOR_BG_TREEMOUTH, gDekuTreeMeetingCs, ALT_CS_NONE, FqCs_DekuTreeIntroSkip },
+    { SCENE_KOKIRI_FOREST, CMP_NONE, gKokiriForestSariaGreetingCs, gAltKokiriForestSariaGreetingCs, FqCs_SariaIntroSkip },
+    { SCENE_KOKIRI_FOREST, ACTOR_BG_TREEMOUTH, gDekuTreeMeetingCs, gAltDekuTreeMeetingCs, FqCs_DekuTreeIntroSkip },
 };
+// clang-format on
 
 static CsHandlerEntry* sQueuedEntry = NULL;
 

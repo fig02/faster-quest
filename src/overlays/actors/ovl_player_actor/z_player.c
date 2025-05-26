@@ -55,6 +55,7 @@
 #include "assets/objects/object_link_child/object_link_child.h"
 
 #include "fq/fq.h"
+#include "fq/debug.h"
 
 // Some player animations are played at this reduced speed, for reasons yet unclear.
 // This is called "adjusted" for now.
@@ -10706,6 +10707,8 @@ void Player_Init(Actor* thisx, PlayState* play2) {
     s32 startMode;
     s32 respawnFlag;
     s32 respawnMode;
+
+    DebugFq_SetSpawnPos(this, play);
 
     play->shootingGalleryStatus = play->bombchuBowlingStatus = 0;
 

@@ -227,7 +227,8 @@ beginseg
     compress
     romalign 0x1000
     include "$(BUILD_DIR)/assets/scenes/overworld/spot04/spot04_scene.o"
-    include "$(BUILD_DIR)/assets/scenes/kokiri_forest/kokiri_forest.o"
+    include "$(BUILD_DIR)/assets/scenes/kokiri_forest/saria_greeting.o"
+    include "$(BUILD_DIR)/assets/scenes/kokiri_forest/dekutree_intro.o"
     number 2
 endseg
 
