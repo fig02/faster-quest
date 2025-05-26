@@ -76,7 +76,7 @@ static CsHandlerEntry gFQCsHandlers[] = {
     { SCENE_LINKS_HOUSE, 0xFFF1, gLinkHouseIntroSleepCs, ALT_CS_NONE, FqCs_IntroSkip },
     { SCENE_KOKIRI_FOREST, CMP_NONE, gKokiriForestSariaGreetingCs, gAltKokiriForestSariaGreetingCs, FqCs_SariaIntroSkip },
     { SCENE_KOKIRI_FOREST, ACTOR_BG_TREEMOUTH, gDekuTreeMeetingCs, gAltDekuTreeMeetingCs, FqCs_DekuTreeIntroSkip },
-    { SCENE_DEKU_TREE, CMP_NONE, gDekuTreeIntroCs, NULL, NULL },
+    // { SCENE_DEKU_TREE, CMP_NONE, gDekuTreeIntroCs, NULL, NULL },
 };
 // clang-format on
 

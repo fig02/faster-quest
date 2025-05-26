@@ -4,7 +4,11 @@
 #include "printf.h"
 #include "z64play.h"
 #include "z64player.h"
+#include "z64save.h"
+#include "z64interface.h"
+#include "z64scene.h"
 #include "z64math.h"
+#include "z64game.h"
 #include "z64room.h"
 
 s32 sRequestedRoomNumber = -1;
@@ -35,6 +39,33 @@ void DebugFq_SetSpawnPos(Player* player, PlayState* play) {
 
         sRequestedRoomNumber = entry.room;
     }
+}
+
+s32 sDebugEntrance = -1;
+// s32 sDebugEntrance = ENTR_DEKU_TREE_0;
+
+s32 DebugFq_LoadToEntrance(GameState* gamestate) {
+    if (sDebugEntrance >= 0) {
+        Sram_InitDebugSave();
+
+        gSaveContext.save.linkAge = LINK_AGE_CHILD;
+
+        gSaveContext.save.entranceIndex = sDebugEntrance;
+        gSaveContext.save.info.playerData.isMagicAcquired = true;
+        gSaveContext.save.info.playerData.isDoubleMagicAcquired = true;
+        gSaveContext.magicFillTarget = gSaveContext.save.info.playerData.magic;
+        gSaveContext.save.info.playerData.magic = 0;
+        gSaveContext.magicCapacity = 0;
+        gSaveContext.save.info.playerData.magicLevel = gSaveContext.save.info.playerData.magic;
+
+        gSaveContext.gameMode = GAMEMODE_NORMAL;
+
+        SET_NEXT_GAMESTATE(gamestate, Play_Init, PlayState);
+
+        return true;
+    }
+
+    return false;
 }
 
 void DebugFq_PrintLinkInfo(PlayState* play) {

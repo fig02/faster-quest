@@ -2317,15 +2317,16 @@ void FileSelect_InitContext(GameState* thisx) {
     envCtx->lightSetting = 0;
     envCtx->skyboxConfig = 2;
 
-    // request dark sky
-    envCtx->changeSkyboxNextConfig = 1;
-    envCtx->changeSkyboxTimer = 200;
-    envCtx->changeSkyboxState = CHANGE_SKYBOX_REQUESTED;
-
     envCtx->skyboxDisabled = 0;
     envCtx->skyboxBlend = 0;
     envCtx->glareAlpha = 0.0f;
     envCtx->lensFlareAlphaScale = 0.0f;
+
+    // (fq) request dark sky
+    this->envCtx.changeSkyboxNextConfig = 1;
+    this->envCtx.changeSkyboxTimer = 185;
+    this->envCtx.changeDuration = 185;
+    this->envCtx.changeSkyboxState = CHANGE_SKYBOX_REQUESTED;
 
     Environment_UpdateSkybox(SKYBOX_NORMAL_SKY, &this->envCtx, &this->skyboxCtx);
 

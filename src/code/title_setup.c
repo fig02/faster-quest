@@ -4,11 +4,16 @@
 #include "translation.h"
 #include "z64save.h"
 
+#include "fq/debug.h"
+
 void Setup_InitImpl(SetupState* this) {
     PRINTF(T("ゼルダ共通データ初期化\n", "Zelda common data initialization\n"));
     SaveContext_Init();
     this->state.running = false;
-    SET_NEXT_GAMESTATE(&this->state, ConsoleLogo_Init, ConsoleLogoState);
+    // (fq) only go to n64 logo if there is no debug entrance
+    if (!DebugFq_LoadToEntrance(&this->state)) {
+        SET_NEXT_GAMESTATE(&this->state, ConsoleLogo_Init, ConsoleLogoState);
+    }
 }
 
 void Setup_Destroy(GameState* thisx) {
