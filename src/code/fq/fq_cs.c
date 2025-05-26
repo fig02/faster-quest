@@ -69,17 +69,17 @@ static CsHandlerEntry gFQCsHandlers[] = {
 };
 // clang-format on
 
-static CsHandlerEntry* sQueuedEntry = NULL;
-
 s32 FqCs_CheckSpecialCases(CsHandlerEntry* entry) {
     if (entry->sceneId == SCENE_LINKS_HOUSE && entry->cmp == 0xFFF1) {
         // Check FQ settings for intro skip
         return gFQ.cfg.skipIntro;
     }
-
+    
     // Default to skipping cutscene if there are no special cases
     return true;
 }
+
+static CsHandlerEntry* sQueuedEntry = NULL;
 
 /**
  * This function runs early in the Play_Init process to override the scene layer if necessary.
@@ -139,12 +139,12 @@ void FqCs_ExecuteEntry(PlayState* play, CsHandlerEntry* entry) {
  * cutscene from playing if necessary.
  */
 void FqCs_Update(PlayState* play) {
-    s32 i;
-
     if (sQueuedEntry != NULL) {
         FqCs_ExecuteEntry(play, sQueuedEntry);
         sQueuedEntry = NULL;
     } else if (gSaveContext.cutsceneTrigger != 0) {
+        s32 i;
+
         // Only search the table if a "non scene layer" cutscene is playing.
         for (i = 0; i < ARRAY_COUNT(gFQCsHandlers); i++) {
             CsHandlerEntry* entry = &gFQCsHandlers[i];
