@@ -151,7 +151,21 @@ void func_808BC864(BgTreemouth* this, PlayState* play) {
         BgTreemouth_SetupAction(this, func_808BC65C);
     }
 }
-#include "printf.h"
+
+void FqTreeMouth_CutsceneHandler(BgTreemouth* this, PlayState* play) {
+    if (gFQ.cfg.quickCsType == QUICK_CS_OFF) {
+        BgTreemouth_SetupAction(this, func_808BC9EC);
+    } else {
+        CsCmdActorCue* cue = play->csCtx.actorCues[0];
+
+        if (gFQ.cfg.quickCsType == QUICK_CS_SKIP || (cue != NULL && cue->id == 3)) {
+            Audio_PlaySfxGeneral(NA_SE_EV_WOODDOOR_OPEN, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
+                                &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
+            BgTreemouth_SetupAction(this, func_808BC6F8);
+        }
+    }
+}
+
 void func_808BC8B8(BgTreemouth* this, PlayState* play) {
     if (!Flags_GetEventChkInf(EVENTCHKINF_05) || LINK_IS_ADULT) {
         if (!LINK_IS_ADULT) {
@@ -166,11 +180,12 @@ void func_808BC8B8(BgTreemouth* this, PlayState* play) {
                     }
                 }
             } else if (Actor_IsFacingAndNearPlayer(&this->dyna.actor, 1658.0f, 0x4E20)) {
-                PRINTF("!!!!! TREE MOUTH DIST %f\n", this->dyna.actor.xzDistToPlayer);
                 Flags_SetEventChkInf(EVENTCHKINF_0C);
                 play->csCtx.script = gDekuTreeMeetingCs;
                 gSaveContext.cutsceneTrigger = 1;
-                BgTreemouth_SetupAction(this, func_808BC9EC);
+
+                // (fq) custom action to handle the intro cutscene
+                BgTreemouth_SetupAction(this, FqTreeMouth_CutsceneHandler);
             }
         }
     } else {
@@ -180,11 +195,6 @@ void func_808BC8B8(BgTreemouth* this, PlayState* play) {
 
 void func_808BC9EC(BgTreemouth* this, PlayState* play) {
     Player* player = GET_PLAYER(play);
-
-    if (gFQ.cs.cue) {
-        // cutscene was skipped, go straight to mouth opening
-        BgTreemouth_SetupAction(this, func_808BC6F8);
-    }
 
     if (play->csCtx.state == CS_STATE_STOP) {
         if (Actor_IsFacingAndNearPlayer(&this->dyna.actor, 350.0f, 0x7530)) {

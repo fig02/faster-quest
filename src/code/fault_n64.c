@@ -788,7 +788,7 @@ void Fault_ThreadEntry(void* arg0) {
         }
         Fault_SleepImpl(500);
         Fault_DrawCornerRecRed();
-        Fault_WaitForButtonCombo();
+        // Fault_WaitForButtonCombo();
         do {
             func_800AF558();
             Fault_PrintThreadContext(faultedThread);

@@ -59,6 +59,7 @@ void FqCs_DekuTreeIntroSkip(PlayState* play, Player* player) {
 // scene cutscenes
 #include "assets/scenes/overworld/spot04/spot04_scene.h"
 #include "assets/scenes/indoors/link_home/link_home_scene.h"
+#include "assets/scenes/dungeons/ydan/ydan_scene.h"
 
 // alternate cutscenes
 #include "assets/scenes/kokiri_forest/saria_greeting.h"
@@ -75,6 +76,7 @@ static CsHandlerEntry gFQCsHandlers[] = {
     { SCENE_LINKS_HOUSE, 0xFFF1, gLinkHouseIntroSleepCs, ALT_CS_NONE, FqCs_IntroSkip },
     { SCENE_KOKIRI_FOREST, CMP_NONE, gKokiriForestSariaGreetingCs, gAltKokiriForestSariaGreetingCs, FqCs_SariaIntroSkip },
     { SCENE_KOKIRI_FOREST, ACTOR_BG_TREEMOUTH, gDekuTreeMeetingCs, gAltDekuTreeMeetingCs, FqCs_DekuTreeIntroSkip },
+    { SCENE_DEKU_TREE, CMP_NONE, gDekuTreeIntroCs, NULL, NULL },
 };
 // clang-format on
 
@@ -150,7 +152,9 @@ void FqCs_Update(PlayState* play) {
         if (FQ_SHOULD_SKIP_CS(sQueuedEntry)) {
             // If there was a match in the PreSceneOverride check, it was saved in `sQueuedEntry`.
             // This prevents having to search through the table again to find it.
-            sQueuedEntry->skipFunc(play, player);
+            if (sQueuedEntry->skipFunc != NULL) {
+                sQueuedEntry->skipFunc(play, player);
+            }
             sQueuedEntry = NULL;
         } else if (gFQ.cfg.quickCsType == QUICK_CS_SHORTEN) {
             play->csCtx.script = SEGMENTED_TO_VIRTUAL(sQueuedEntry->csAlt);
@@ -179,7 +183,10 @@ void FqCs_Update(PlayState* play) {
                 if (FQ_SHOULD_SKIP_CS(entry)) {
                     gSaveContext.save.cutsceneIndex = 0;
                     gSaveContext.cutsceneTrigger = 0;
-                    entry->skipFunc(play, player);
+
+                    if (entry->skipFunc != NULL) {
+                        entry->skipFunc(play, player);
+                    }
                 } else if (gFQ.cfg.quickCsType == QUICK_CS_SHORTEN) {
                     play->csCtx.script = SEGMENTED_TO_VIRTUAL(entry->csAlt);
                 }

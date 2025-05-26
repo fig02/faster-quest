@@ -7,17 +7,6 @@
 #include "z64math.h"
 #include "z64room.h"
 
-typedef struct DebugSpawn {
-    u8 sceneId;
-    u8 room;
-    Vec3f pos;
-    s16 yaw;
-} DebugSpawn;
-
-DebugSpawn sSpawnTable[] = {
-    { SCENE_KOKIRI_FOREST, 1, { 2352.0f, -1.0f, -464.0f }, 0x51D5},
-};
-
 s32 sRequestedRoomNumber = -1;
 
 void DebugFq_ProcessRoomChangeRequest(PlayState* play) {
@@ -27,20 +16,24 @@ void DebugFq_ProcessRoomChangeRequest(PlayState* play) {
     }
 }
 
+typedef struct DebugSpawn {
+    s16 sceneId;
+    u8 room;
+    Vec3f pos;
+    s16 yaw;
+} DebugSpawn;
+
 // This is called in Player_Init
 void DebugFq_SetSpawnPos(Player* player, PlayState* play) {
-    s32 i;
+    // DebugSpawn entry = { SCENE_KOKIRI_FOREST, 1, { 2352.0f, -1.0f, -464.0f }, 0x51D5 };
+    DebugSpawn entry = { -1, 1, { 2352.0f, -1.0f, -464.0f }, 0x51D5 };
 
-    for (i = 0; i < ARRAY_COUNT(sSpawnTable); i++) {
-        DebugSpawn* entry = &sSpawnTable[i];
-        
-        if (entry->sceneId == play->sceneId) {
-            player->actor.world.pos = entry->pos;
-            player->actor.home.pos = player->actor.world.pos;
-            player->actor.world.rot.y = player->actor.shape.rot.y = entry->yaw;
+    if (entry.sceneId >= 0 && entry.sceneId == play->sceneId) {
+        player->actor.world.pos = entry.pos;
+        player->actor.home.pos = player->actor.world.pos;
+        player->actor.world.rot.y = player->actor.shape.rot.y = entry.yaw;
 
-            sRequestedRoomNumber = entry->room;
-        }
+        sRequestedRoomNumber = entry.room;
     }
 }
 
