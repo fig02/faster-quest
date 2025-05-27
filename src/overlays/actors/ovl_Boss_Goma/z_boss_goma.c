@@ -61,7 +61,7 @@ void BossGoma_Draw(Actor* thisx, PlayState* play);
 
 void BossGoma_SetupEncounter(BossGoma* this, PlayState* play);
 void BossGoma_EncounterFq(BossGoma* this, PlayState* play);
-void BossGoma_Defeated(BossGoma* this, PlayState* play);
+void BossGoma_DefeatedFq(BossGoma* this, PlayState* play);
 void BossGoma_FloorAttackPosture(BossGoma* this, PlayState* play);
 void BossGoma_FloorPrepareAttack(BossGoma* this, PlayState* play);
 void BossGoma_FloorAttack(BossGoma* this, PlayState* play);
@@ -429,7 +429,7 @@ void BossGoma_Destroy(Actor* thisx, PlayState* play) {
 void BossGoma_SetupDefeated(BossGoma* this, PlayState* play) {
     Animation_Change(&this->skelanime, &gGohmaDeathAnim, 1.0f, 0.0f, Animation_GetLastFrame(&gGohmaDeathAnim),
                      ANIMMODE_ONCE, -2.0f);
-    this->actionFunc = BossGoma_Defeated;
+    this->actionFunc = BossGoma_DefeatedFq;
     this->disableGameplayLogic = true;
     this->decayingProgress = 0;
     this->noBackfaceCulling = false;
@@ -968,6 +968,282 @@ void BossGoma_EncounterFq(BossGoma* this, PlayState* play) {
  * Spawns the heart container and blue warp actors
  */
 void BossGoma_Defeated(BossGoma* this, PlayState* play) {
+    static Vec3f roomCenter = { -150.0f, 0.0f, -350.0f };
+    f32 dx;
+    f32 dz;
+    s16 j;
+    Vec3f vel1 = { 0.0f, 0.0f, 0.0f };
+    Vec3f accel1 = { 0.0f, 1.0f, 0.0f };
+    Color_RGBA8 color1 = { 255, 255, 255, 255 };
+    Color_RGBA8 color2 = { 0, 100, 255, 255 };
+    Vec3f vel2 = { 0.0f, 0.0f, 0.0f };
+    Vec3f accel2 = { 0.0f, -0.5f, 0.0f };
+    Vec3f pos;
+    Camera* mainCam;
+    Player* player = GET_PLAYER(play);
+    Vec3f childPos;
+    s16 i;
+
+    SkelAnime_Update(&this->skelanime);
+    Math_ApproachS(&this->actor.shape.rot.x, 0, 2, 0xBB8);
+
+    if (Animation_OnFrame(&this->skelanime, 107.0f)) {
+        BossGoma_PlayEffectsAndSfx(this, play, 0, 8);
+        Rumble_Override(0.0f, 150, 20, 20);
+    }
+
+    this->visualState = VISUALSTATE_DEFEATED;
+    this->eyeState = EYESTATE_IRIS_NO_FOLLOW_NO_IFRAMES;
+
+    if (this->framesUntilNextAction == 1001) {
+        for (i = 0; i < 90; i++) {
+            if (sDeadLimbLifetime[i] != 0) {
+                this->deadLimbsState[i] = 1;
+            }
+        }
+    }
+
+    if (this->framesUntilNextAction < 1200 && this->framesUntilNextAction > 1100 &&
+        this->framesUntilNextAction % 8 == 0) {
+        EffectSsSibuki_SpawnBurst(play, &this->actor.focus.pos);
+    }
+
+    if (this->framesUntilNextAction < 1080 && this->actionState < 3) {
+        if (this->framesUntilNextAction < 1070) {
+            Actor_PlaySfx(&this->actor, NA_SE_EN_GOMA_LAST - SFX_FLAG);
+        }
+
+        for (i = 0; i < 4; i++) {
+            //! @bug this 0-indexes into this->defeatedLimbPositions which is initialized with
+            //! this->defeatedLimbPositions[limb], but limb is 1-indexed in skelanime callbacks, this means effects
+            //! should spawn at this->defeatedLimbPositions[0] too, which is uninitialized, so map origin?
+            j = (s16)(Rand_ZeroOne() * (BOSSGOMA_LIMB_MAX - 1));
+            if (this->defeatedLimbPositions[j].y < 10000.0f) {
+                pos.x = Rand_CenteredFloat(20.0f) + this->defeatedLimbPositions[j].x;
+                pos.y = Rand_CenteredFloat(10.0f) + this->defeatedLimbPositions[j].y;
+                pos.z = Rand_CenteredFloat(20.0f) + this->defeatedLimbPositions[j].z;
+                func_8002836C(play, &pos, &vel1, &accel1, &color1, &color2, 500, 10, 10);
+            }
+        }
+
+        for (i = 0; i < 15; i++) {
+            //! @bug same as above
+            j = (s16)(Rand_ZeroOne() * (BOSSGOMA_LIMB_MAX - 1));
+            if (this->defeatedLimbPositions[j].y < 10000.0f) {
+                pos.x = Rand_CenteredFloat(20.0f) + this->defeatedLimbPositions[j].x;
+                pos.y = Rand_CenteredFloat(10.0f) + this->defeatedLimbPositions[j].y;
+                pos.z = Rand_CenteredFloat(20.0f) + this->defeatedLimbPositions[j].z;
+                EffectSsHahen_Spawn(play, &pos, &vel2, &accel2, 0, (s16)(Rand_ZeroOne() * 5.0f) + 10, -1, 10, NULL);
+            }
+        }
+    }
+
+    switch (this->actionState) {
+        case 0:
+            this->actionState = 1;
+            Cutscene_StartManual(play, &play->csCtx);
+            Player_SetCsActionWithHaltedActors(play, &this->actor, PLAYER_CSACTION_1);
+            this->subCamId = Play_CreateSubCamera(play);
+            Play_ChangeCameraStatus(play, CAM_ID_MAIN, CAM_STAT_UNK3);
+            Play_ChangeCameraStatus(play, this->subCamId, CAM_STAT_ACTIVE);
+            mainCam = Play_GetCamera(play, CAM_ID_MAIN);
+            this->subCamEye.x = mainCam->eye.x;
+            this->subCamEye.y = mainCam->eye.y;
+            this->subCamEye.z = mainCam->eye.z;
+            this->subCamAt.x = mainCam->at.x;
+            this->subCamAt.y = mainCam->at.y;
+            this->subCamAt.z = mainCam->at.z;
+            dx = this->subCamEye.x - this->actor.world.pos.x;
+            dz = this->subCamEye.z - this->actor.world.pos.z;
+            this->defeatedCameraEyeDist = sqrtf(SQ(dx) + SQ(dz));
+            this->defeatedCameraEyeAngle = Math_FAtan2F(dx, dz);
+            this->timer = 270;
+            break;
+
+        case 1:
+            dx = Math_SinS(this->actor.shape.rot.y) * 100.0f;
+            dz = Math_CosS(this->actor.shape.rot.y) * 100.0f;
+            Math_ApproachF(&player->actor.world.pos.x, this->actor.world.pos.x + dx, 0.5f, 5.0f);
+            Math_ApproachF(&player->actor.world.pos.z, this->actor.world.pos.z + dz, 0.5f, 5.0f);
+
+            if (this->framesUntilNextAction < 1080) {
+                this->noBackfaceCulling = true;
+
+                for (i = 0; i < 4; i++) {
+                    BossGoma_ClearPixels(sClearPixelTableFirstPass, this->decayingProgress);
+                    //! @bug this allows this->decayingProgress = 0x100 = 256 which
+                    //! is out of bounds when accessing sClearPixelTableFirstPass
+                    if (this->decayingProgress < 0x100) {
+                        this->decayingProgress++;
+                    }
+                }
+            }
+
+            if (this->framesUntilNextAction < 1070 && this->frameCount % 4 == 0 && Rand_ZeroOne() < 0.5f) {
+                this->blinkTimer = 3;
+            }
+
+            this->defeatedCameraEyeAngle += 0.022f;
+            Math_ApproachF(&this->defeatedCameraEyeDist, 150.0f, 0.1f, 5.0f);
+            dx = sinf(this->defeatedCameraEyeAngle);
+            dx = dx * this->defeatedCameraEyeDist;
+            dz = cosf(this->defeatedCameraEyeAngle);
+            dz = dz * this->defeatedCameraEyeDist;
+            Math_SmoothStepToF(&this->subCamEye.x, this->actor.world.pos.x + dx, 0.2f, 50.0f, 0.1f);
+            Math_SmoothStepToF(&this->subCamEye.y, this->actor.world.pos.y + 20.0f, 0.2f, 50.0f, 0.1f);
+            Math_SmoothStepToF(&this->subCamEye.z, this->actor.world.pos.z + dz, 0.2f, 50.0f, 0.1f);
+            Math_SmoothStepToF(&this->subCamAt.x, this->firstTailLimbWorldPos.x, 0.2f, 50.0f, 0.1f);
+            Math_SmoothStepToF(&this->subCamAt.y, this->actor.focus.pos.y, 0.5f, 100.0f, 0.1f);
+            Math_SmoothStepToF(&this->subCamAt.z, this->firstTailLimbWorldPos.z, 0.2f, 50.0f, 0.1f);
+
+            if (this->timer == 80) {
+                SEQCMD_PLAY_SEQUENCE(SEQ_PLAYER_BGM_MAIN, 0, 0, NA_BGM_BOSS_CLEAR);
+            }
+
+            if (this->timer == 0) {
+                this->actionState = 2;
+                Play_ChangeCameraStatus(play, CAM_ID_MAIN, CAM_STAT_UNK3);
+                this->timer = 70;
+                this->decayingProgress = 0;
+                this->subCamFollowSpeed = 0.0f;
+                Actor_Spawn(&play->actorCtx, play, ACTOR_ITEM_B_HEART, this->actor.world.pos.x, this->actor.world.pos.y,
+                            this->actor.world.pos.z, 0, 0, 0, 0);
+            }
+            break;
+
+        case 2:
+            mainCam = Play_GetCamera(play, CAM_ID_MAIN);
+            Math_SmoothStepToF(&this->subCamEye.x, mainCam->eye.x, 0.2f, this->subCamFollowSpeed * 50.0f, 0.1f);
+            Math_SmoothStepToF(&this->subCamEye.y, mainCam->eye.y, 0.2f, this->subCamFollowSpeed * 50.0f, 0.1f);
+            Math_SmoothStepToF(&this->subCamEye.z, mainCam->eye.z, 0.2f, this->subCamFollowSpeed * 50.0f, 0.1f);
+            Math_SmoothStepToF(&this->subCamAt.x, mainCam->at.x, 0.2f, this->subCamFollowSpeed * 50.0f, 0.1f);
+            Math_SmoothStepToF(&this->subCamAt.y, mainCam->at.y, 0.2f, this->subCamFollowSpeed * 50.0f, 0.1f);
+            Math_SmoothStepToF(&this->subCamAt.z, mainCam->at.z, 0.2f, this->subCamFollowSpeed * 50.0f, 0.1f);
+            Math_SmoothStepToF(&this->subCamFollowSpeed, 1.0f, 1.0f, 0.02f, 0.0f);
+
+            if (this->timer == 0) {
+                childPos = roomCenter;
+                this->timer = 30;
+                this->actionState = 3;
+
+                for (i = 0; i < 10000; i++) {
+                    if ((fabsf(childPos.x - player->actor.world.pos.x) < 100.0f &&
+                         fabsf(childPos.z - player->actor.world.pos.z) < 100.0f) ||
+                        (fabsf(childPos.x - this->actor.world.pos.x) < 150.0f &&
+                         fabsf(childPos.z - this->actor.world.pos.z) < 150.0f)) {
+                        childPos.x = Rand_CenteredFloat(400.0f) + -150.0f;
+                        childPos.z = Rand_CenteredFloat(400.0f) + -350.0f;
+                    } else {
+                        break;
+                    }
+                }
+
+                Actor_SpawnAsChild(&play->actorCtx, &this->actor, play, ACTOR_DOOR_WARP1, childPos.x,
+                                   this->actor.world.pos.y, childPos.z, 0, 0, 0, WARP_DUNGEON_CHILD);
+                Flags_SetClear(play, play->roomCtx.curRoom.num);
+            }
+
+            for (i = 0; i < 4; i++) {
+                BossGoma_ClearPixels(sClearPixelTableSecondPass, this->decayingProgress);
+                //! @bug same as sClearPixelTableFirstPass
+                if (this->decayingProgress < 0x100) {
+                    this->decayingProgress++;
+                }
+            }
+            break;
+
+        case 3:
+            for (i = 0; i < 4; i++) {
+                BossGoma_ClearPixels(sClearPixelTableSecondPass, this->decayingProgress);
+                //! @bug same as sClearPixelTableFirstPass
+                if (this->decayingProgress < 0x100) {
+                    this->decayingProgress++;
+                }
+            }
+
+            if (this->timer == 0) {
+                if (Math_SmoothStepToF(&this->actor.scale.y, 0, 1.0f, 0.00075f, 0.0f) <= 0.001f) {
+                    mainCam = Play_GetCamera(play, CAM_ID_MAIN);
+                    mainCam->eye = this->subCamEye;
+                    mainCam->eyeNext = this->subCamEye;
+                    mainCam->at = this->subCamAt;
+                    Play_ReturnToMainCam(play, this->subCamId, 0);
+                    this->subCamId = SUB_CAM_ID_DONE;
+                    Cutscene_StopManual(play, &play->csCtx);
+                    Player_SetCsActionWithHaltedActors(play, &this->actor, PLAYER_CSACTION_7);
+                    Actor_Kill(&this->actor);
+                }
+
+                this->actor.scale.x = this->actor.scale.z = this->actor.scale.y;
+            }
+            break;
+    }
+
+    if (this->subCamId != SUB_CAM_ID_DONE) {
+        Play_SetCameraAtEye(play, this->subCamId, &this->subCamAt, &this->subCamEye);
+    }
+
+    if (this->blinkTimer != 0) {
+        this->blinkTimer--;
+        play->envCtx.adjAmbientColor[0] += 40;
+        play->envCtx.adjAmbientColor[1] += 40;
+        play->envCtx.adjAmbientColor[2] += 80;
+        play->envCtx.adjFogColor[0] += 10;
+        play->envCtx.adjFogColor[1] += 10;
+        play->envCtx.adjFogColor[2] += 20;
+    } else {
+        play->envCtx.adjAmbientColor[0] -= 20;
+        play->envCtx.adjAmbientColor[1] -= 20;
+        play->envCtx.adjAmbientColor[2] -= 40;
+        play->envCtx.adjFogColor[0] -= 5;
+        play->envCtx.adjFogColor[1] -= 5;
+        play->envCtx.adjFogColor[2] -= 10;
+    }
+
+    if (play->envCtx.adjAmbientColor[0] > 200) {
+        play->envCtx.adjAmbientColor[0] = 200;
+    }
+    if (play->envCtx.adjAmbientColor[1] > 200) {
+        play->envCtx.adjAmbientColor[1] = 200;
+    }
+    if (play->envCtx.adjAmbientColor[2] > 200) {
+        play->envCtx.adjAmbientColor[2] = 200;
+    }
+    if (play->envCtx.adjFogColor[0] > 70) {
+        play->envCtx.adjFogColor[0] = 70;
+    }
+    if (play->envCtx.adjFogColor[1] > 70) {
+        play->envCtx.adjFogColor[1] = 70;
+    }
+    if (play->envCtx.adjFogColor[2] > 140) {
+        play->envCtx.adjFogColor[2] = 140;
+    }
+
+    if (play->envCtx.adjAmbientColor[0] < 0) {
+        play->envCtx.adjAmbientColor[0] = 0;
+    }
+    if (play->envCtx.adjAmbientColor[1] < 0) {
+        play->envCtx.adjAmbientColor[1] = 0;
+    }
+    if (play->envCtx.adjAmbientColor[2] < 0) {
+        play->envCtx.adjAmbientColor[2] = 0;
+    }
+    if (play->envCtx.adjFogColor[0] < 0) {
+        play->envCtx.adjFogColor[0] = 0;
+    }
+    if (play->envCtx.adjFogColor[1] < 0) {
+        play->envCtx.adjFogColor[1] = 0;
+    }
+    if (play->envCtx.adjFogColor[2] < 0) {
+        play->envCtx.adjFogColor[2] = 0;
+    }
+}
+
+/**
+ * Handles the "Gohma defeated" cutscene and effects
+ * Spawns the heart container and blue warp actors
+ */
+void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
     static Vec3f roomCenter = { -150.0f, 0.0f, -350.0f };
     f32 dx;
     f32 dz;
