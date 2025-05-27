@@ -43,7 +43,7 @@ void DebugFq_SetSpawnPos(Player* player, PlayState* play) {
 }
 
 // s32 sDebugEntrance = -1;
-s32 sDebugEntrance = -1;
+s32 sDebugEntrance = ENTR_KOKIRI_SHOP_0;
 
 s32 DebugFq_LoadToEntrance(GameState* gamestate) {
     if (sDebugEntrance >= 0) {

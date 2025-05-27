@@ -344,27 +344,37 @@ void Message_UpdateOcarinaMemoryGame(PlayState* play) {
     Message_ResetOcarinaNoteState();
 }
 
-u8 MessageFq_QuickTextButtonCheck(Input* input) {
-    u16 buttons = gFQ.cfg.quickTextMode == QUICK_TEXT_HOLD ? input->cur.button : input->press.button;
+u8 MessageFq_QuickTextButtonCheck(PlayState* play) {
+    Input* input = &play->state.input[0];
+    u16 buttons = input->press.button; // default to press
+
+    if (gFQ.cfg.quickTextMode == QUICK_TEXT_HOLD) {
+        u8 dialogState = Message_GetState(&play->msgCtx);
+        // Hold B for quick text, unless on a choice box
+        if (dialogState != TEXT_STATE_CHOICE) {
+            buttons = input->cur.button;
+        }
+    }
+
     return CHECK_BTN_ALL(buttons, BTN_B);
 }
 
 u8 Message_ShouldAdvance(PlayState* play) {
     Input* input = &play->state.input[0];
-
-    if (CHECK_BTN_ALL(input->press.button, BTN_A) || MessageFq_QuickTextButtonCheck(input) ||
+    
+    if (CHECK_BTN_ALL(input->press.button, BTN_A) || MessageFq_QuickTextButtonCheck(play) ||
         CHECK_BTN_ALL(input->press.button, BTN_CUP)) {
         Audio_PlaySfxGeneral(NA_SE_SY_MESSAGE_PASS, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
                              &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
     }
-    return CHECK_BTN_ALL(input->press.button, BTN_A) || MessageFq_QuickTextButtonCheck(input) ||
+    return CHECK_BTN_ALL(input->press.button, BTN_A) || MessageFq_QuickTextButtonCheck(play) ||
            CHECK_BTN_ALL(input->press.button, BTN_CUP);
 }
 
 u8 Message_ShouldAdvanceSilent(PlayState* play) {
     Input* input = &play->state.input[0];
 
-    return CHECK_BTN_ALL(input->press.button, BTN_A) || MessageFq_QuickTextButtonCheck(input) ||
+    return CHECK_BTN_ALL(input->press.button, BTN_A) || MessageFq_QuickTextButtonCheck(play) ||
            CHECK_BTN_ALL(input->press.button, BTN_CUP);
 }
 
@@ -4353,8 +4363,9 @@ void Message_Update(PlayState* play) {
                 }
                 break;
             case MSGMODE_TEXT_DISPLAYING:
-                if (msgCtx->textBoxType != TEXTBOX_TYPE_NONE_BOTTOM && YREG(31) == 0 && !sTextboxSkipped &&
-                    MessageFq_QuickTextButtonCheck(input) && !msgCtx->textUnskippable) {
+                // (fq) original condition has YREG(31) == 0 which makes quick text impossible in shop interations
+                if (msgCtx->textBoxType != TEXTBOX_TYPE_NONE_BOTTOM && !sTextboxSkipped &&
+                    MessageFq_QuickTextButtonCheck(play) && !msgCtx->textUnskippable) {
                     sTextboxSkipped = true;
                     msgCtx->textDrawPos = msgCtx->decodedTextLen;
                 }
