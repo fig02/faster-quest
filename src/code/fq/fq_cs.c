@@ -40,7 +40,15 @@ void FqCs_SetPlayerPosYaw(Player* player, f32 x, f32 y, f32 z, s16 yaw, u8 setNa
 void FqCs_IntroSkip(PlayState* play, Player* player) {
     play->viewpoint = VIEWPOINT_LOCKED;
     Camera_RequestBgCam(GET_ACTIVE_CAM(play), play->viewpoint - 1);
-    FqCs_SetPlayerPosYaw(player, 0, 0, 60, 0x8000, true);
+    FqCs_SetPlayerPosYaw(player, 0.0f, 0.0f, 60.0f, 0x8000, true);
+}
+
+void FqCs_DekuTreeIntroSkip(PlayState* play, Player* player) {
+    // Due to where this function call happens, link takes a step and moves 3 units.
+    // To land at 597, set it to 600
+    // TODO any better solution that isnt garbage???
+    FqCs_SetPlayerPosYaw(player, -4.0f, 0.0f, 600.0f, 0x8000, true);
+    gFQ.playerActionRequest = FQ_PLAYER_ACTION_IDLE;
 }
 
 // ================= TABLE
@@ -65,7 +73,7 @@ static CsHandlerEntry gFQCsHandlers[] = {
     { SCENE_LINKS_HOUSE, 0xFFF1, gLinkHouseIntroSleepCs, ALT_CS_NONE, FqCs_IntroSkip },
     { SCENE_KOKIRI_FOREST, CMP_NONE, gKokiriForestSariaGreetingCs, gAltKokiriForestSariaGreetingCs, NULL },
     { SCENE_KOKIRI_FOREST, ACTOR_BG_TREEMOUTH, gDekuTreeMeetingCs, gAltDekuTreeMeetingCs, NULL },
-    { SCENE_DEKU_TREE, CMP_NONE, gDekuTreeIntroCs, NULL, NULL },
+    { SCENE_DEKU_TREE, CMP_NONE, gDekuTreeIntroCs, NULL, FqCs_DekuTreeIntroSkip },
 };
 // clang-format on
 

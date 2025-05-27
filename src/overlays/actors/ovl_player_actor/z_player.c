@@ -11685,6 +11685,8 @@ static f32 sFloorConveyorSpeeds[CONVEYOR_SPEED_MAX - 1] = {
     3.0f, // CONVEYOR_SPEED_FAST
 };
 
+#include "player_action.inc.c"
+
 void Player_UpdateCommon(Player* this, PlayState* play, Input* input) {
     s32 pad;
 
@@ -11989,6 +11991,9 @@ void Player_UpdateCommon(Player* this, PlayState* play, Input* input) {
 
         sUseHeldItem = sHeldItemButtonIsHeldDown = false;
         sSavedCurrentMask = this->currentMask;
+
+        // (fq) handle fq action change requests
+        PlayerFq_ProcessActionRequests(this, play);
 
         if (!(this->stateFlags3 & PLAYER_STATE3_2)) {
             this->actionFunc(this, play);

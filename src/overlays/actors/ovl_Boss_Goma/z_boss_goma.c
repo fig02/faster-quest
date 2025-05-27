@@ -60,7 +60,7 @@ void BossGoma_Update(Actor* thisx, PlayState* play);
 void BossGoma_Draw(Actor* thisx, PlayState* play);
 
 void BossGoma_SetupEncounter(BossGoma* this, PlayState* play);
-void BossGoma_Encounter(BossGoma* this, PlayState* play);
+void BossGoma_EncounterFq(BossGoma* this, PlayState* play);
 void BossGoma_Defeated(BossGoma* this, PlayState* play);
 void BossGoma_FloorAttackPosture(BossGoma* this, PlayState* play);
 void BossGoma_FloorPrepareAttack(BossGoma* this, PlayState* play);
@@ -449,7 +449,7 @@ void BossGoma_SetupEncounter(BossGoma* this, PlayState* play) {
     f32 lastFrame = Animation_GetLastFrame(&gGohmaWalkAnim);
 
     Animation_Change(&this->skelanime, &gGohmaWalkAnim, 1.0f, 0.0f, lastFrame, ANIMMODE_LOOP, -15.0f);
-    this->actionFunc = BossGoma_Encounter;
+    this->actionFunc = BossGoma_EncounterFq;
     this->actionState = 0;
     this->disableGameplayLogic = true;
     play->envCtx.lightSettingOverride = 4;
@@ -669,8 +669,8 @@ void BossGoma_SetupEncounterState4(BossGoma* this, PlayState* play) {
     this->currentAnimFrameCount = Animation_GetLastFrame(&gGohmaEyeRollAnim);
 
     // room center (todo: defines for hardcoded positions relative to room center)
-    this->actor.world.pos.x = -150.0f;
-    this->actor.world.pos.z = -350.0f;
+    this->actor.world.pos.x = -79.507339f;
+    this->actor.world.pos.z = -197.509460f;
 
     // room entrance, towards center
     player->actor.world.pos.x = 150.0f;
@@ -690,17 +690,15 @@ void BossGoma_SetupEncounterState4(BossGoma* this, PlayState* play) {
     this->subCamAt.y = this->actor.world.pos.y;
     this->subCamAt.z = this->actor.world.pos.z;
 
+    play->envCtx.lightSettingOverride = 4;
+
     SEQCMD_STOP_SEQUENCE(SEQ_PLAYER_BGM_MAIN, 1);
 }
 
 /**
- * Spawns the door once the player entered
- * Wait for the player to look at Gohma on the ceiling
- * Handles the "meeting Gohma" cutscene, including boss card
- *
- * Skips the door and look-at-Gohma puzzle if the player already reached the boss card part before
+ * Intro Cutscene, Faster Quest Shorter Version
  */
-void BossGoma_Encounter(BossGoma* this, PlayState* play) {
+void BossGoma_EncounterFq(BossGoma* this, PlayState* play) {
     Camera* mainCam;
     Player* player = GET_PLAYER(play);
     f32 s;
@@ -727,72 +725,59 @@ void BossGoma_Encounter(BossGoma* this, PlayState* play) {
         case 1: // player entered the room
             Cutscene_StartManual(play, &play->csCtx);
             this->subCamId = Play_CreateSubCamera(play);
-            PRINTF("MAKE CAMERA !!!   1   !!!!!!!!!!!!!!!!!!!!!!!!!!\n");
             Play_ChangeCameraStatus(play, CAM_ID_MAIN, CAM_STAT_WAIT);
             Play_ChangeCameraStatus(play, this->subCamId, CAM_STAT_ACTIVE);
             this->actionState = 2;
-            // ceiling center
+
+            // climb on ceiling
             this->actor.world.pos.x = -150.0f;
             this->actor.world.pos.y = -320.0f;
             this->actor.world.pos.z = -350.0f;
-            // room entrance
+
+            // player at room entrance
+            player->actor.shape.rot.y = -0x705C;
             player->actor.world.pos.x = 150.0f;
             player->actor.world.pos.z = 300.0f;
-            // near ceiling center
-            this->subCamEye.x = -350.0f;
-            this->subCamEye.y = -310.0f;
-            this->subCamEye.z = -350.0f;
+            player->actor.world.rot.y = player->actor.shape.rot.y;
+            player->actor.speed = 0.0f;
+            
+            // cam eye near player
+            this->subCamEye.x = 115.0f;
+            this->subCamEye.y = -640.0f + 40.0f;
+            this->subCamEye.z = 158.0f;
+
             // below room entrance
             this->subCamAt.x = player->actor.world.pos.x;
-            this->subCamAt.y = player->actor.world.pos.y - 200.0f + 25.0f;
+            this->subCamAt.y = player->actor.world.pos.y + 25.0f;
             this->subCamAt.z = player->actor.world.pos.z;
             this->framesUntilNextAction = 50;
             this->timer = 80;
             this->frameCount = 0;
             this->actor.flags &= ~ACTOR_FLAG_ATTENTION_ENABLED;
             FALLTHROUGH;
-        case 2: // zoom on player from room center
-            // room entrance, towards center
-            player->actor.shape.rot.y = -0x705C;
-            player->actor.world.pos.x = 150.0f;
-            player->actor.world.pos.z = 300.0f;
-            player->actor.world.rot.y = player->actor.shape.rot.y;
-            player->actor.speed = 0.0f;
-
-            if (this->framesUntilNextAction == 0) {
-                // (-20, 25, -65) is towards room center
-                Math_ApproachF(&this->subCamEye.x, player->actor.world.pos.x - 20.0f, 0.049999997f,
-                               this->subCamFollowSpeed * 50.0f);
-                Math_ApproachF(&this->subCamEye.y, player->actor.world.pos.y + 25.0f, 0.099999994f,
-                               this->subCamFollowSpeed * 130.0f);
-                Math_ApproachF(&this->subCamEye.z, player->actor.world.pos.z - 65.0f, 0.049999997f,
-                               this->subCamFollowSpeed * 30.0f);
-                Math_ApproachF(&this->subCamFollowSpeed, 0.29999998f, 1.0f, 0.0050000004f);
-                if (this->timer == 0) {
-                    Math_ApproachF(&this->subCamAt.y, player->actor.world.pos.y + 35.0f, 0.099999994f,
-                                   this->subCamFollowSpeed * 30.0f);
-                }
-                this->subCamAt.x = player->actor.world.pos.x;
-                this->subCamAt.z = player->actor.world.pos.z;
-            }
+        case 2: // pan camera and close door
+            Math_ApproachF(&this->subCamEye.x, player->actor.world.pos.x - 20.0f, 0.05f, this->subCamFollowSpeed * 50.0f);
+            Math_ApproachF(&this->subCamEye.y, player->actor.world.pos.y + 25.0f, 0.1f, this->subCamFollowSpeed * 130.0f);
+            Math_ApproachF(&this->subCamEye.z, player->actor.world.pos.z - 65.0f, 0.05f, this->subCamFollowSpeed * 30.0f);
+            Math_ApproachF(&this->subCamFollowSpeed, 0.3f, 1.0f, 0.001f);
 
             Play_SetCameraAtEye(play, CAM_ID_MAIN, &this->subCamAt, &this->subCamEye);
 
-            if (this->frameCount == 176) {
+            #define DOOR_CLOSE_FRAME 15
+
+            if (this->frameCount == DOOR_CLOSE_FRAME) {
                 Actor_SpawnAsChild(&play->actorCtx, &this->actor, play, ACTOR_DOOR_SHUTTER, 164.72f, -480.0f,
                                    397.68002f, 0, -0x705C, 0, DOORSHUTTER_PARAMS(SHUTTER_GOHMA_BLOCK, 0));
-            }
 
-            if (this->frameCount == 176) {
                 play->envCtx.lightSettingOverride = 3;
                 play->envCtx.lightBlendRateOverride = LIGHT_BLENDRATE_OVERRIDE_NONE;
             }
 
-            if (this->frameCount == 190) {
+            if (this->frameCount == DOOR_CLOSE_FRAME + 14) {
                 Player_SetCsActionWithHaltedActors(play, &this->actor, PLAYER_CSACTION_2);
             }
 
-            if (this->frameCount >= 228) {
+            if (this->frameCount >= DOOR_CLOSE_FRAME + 52) {
                 Camera* mainCam = Play_GetCamera(play, CAM_ID_MAIN);
 
                 mainCam->eye = this->subCamEye;
@@ -829,75 +814,38 @@ void BossGoma_Encounter(BossGoma* this, PlayState* play) {
                 Actor_PlaySfx(&this->actor, NA_SE_EN_GOMA_DEMO_EYE);
             }
 
-            if (this->framesUntilNextAction <= 40) {
-                // (22, -25, 45) is towards room entrance
-                Math_ApproachF(&this->subCamEye.x, this->actor.world.pos.x + 22.0f, 0.2f, 100.0f);
-                Math_ApproachF(&this->subCamEye.y, this->actor.world.pos.y - 25.0f, 0.2f, 100.0f);
-                Math_ApproachF(&this->subCamEye.z, this->actor.world.pos.z + 45.0f, 0.2f, 100.0f);
-                Math_ApproachF(&this->subCamAt.x, this->actor.world.pos.x, 0.2f, 100.0f);
-                Math_ApproachF(&this->subCamAt.y, this->actor.world.pos.y + 5.0f, 0.2f, 100.0f);
-                Math_ApproachF(&this->subCamAt.z, this->actor.world.pos.z, 0.2f, 100.0f);
+            Math_ApproachF(&this->subCamEye.x, this->actor.world.pos.x + 22.0f, 0.2f, 100.0f);
+            Math_ApproachF(&this->subCamEye.y, this->actor.world.pos.y - 25.0f, 0.2f, 100.0f);
+            Math_ApproachF(&this->subCamEye.z, this->actor.world.pos.z + 45.0f, 0.2f, 100.0f);
+            Math_ApproachF(&this->subCamAt.x, this->actor.world.pos.x, 0.2f, 100.0f);
+            Math_ApproachF(&this->subCamAt.y, this->actor.world.pos.y + 5.0f, 0.2f, 100.0f);
+            Math_ApproachF(&this->subCamAt.z, this->actor.world.pos.z, 0.2f, 100.0f);
 
-                if (this->framesUntilNextAction == 30) {
-                    play->envCtx.lightSettingOverride = 4;
-                }
+            SkelAnime_Update(&this->skelanime);
+            Math_ApproachF(&this->eyeIrisScaleX, 1.0f, 0.8f, 0.4f);
+            Math_ApproachF(&this->eyeIrisScaleY, 1.0f, 0.8f, 0.4f);
 
-                if (this->framesUntilNextAction < 20) {
-                    SkelAnime_Update(&this->skelanime);
-                    Math_ApproachF(&this->eyeIrisScaleX, 1.0f, 0.8f, 0.4f);
-                    Math_ApproachF(&this->eyeIrisScaleY, 1.0f, 0.8f, 0.4f);
-
-                    if (Animation_OnFrame(&this->skelanime, 36.0f)) {
-                        this->eyeIrisScaleX = 1.8f;
-                        this->eyeIrisScaleY = 1.8f;
-                    }
-
-                    if (Animation_OnFrame(&this->skelanime, this->currentAnimFrameCount)) {
-                        this->actionState = 5;
-                        Animation_Change(&this->skelanime, &gGohmaWalkAnim, 2.0f, 0.0f,
-                                         Animation_GetLastFrame(&gGohmaWalkAnim), ANIMMODE_LOOP, -5.0f);
-                        this->framesUntilNextAction = 30;
-                        this->subCamFollowSpeed = 0.0f;
-                    }
-                }
-            }
-            break;
-
-        case 5: // running on the ceiling
-            // (98, 0, 85) is towards room entrance
-            Math_ApproachF(&this->subCamEye.x, this->actor.world.pos.x + 8.0f + 90.0f, 0.1f,
-                           this->subCamFollowSpeed * 30.0f);
-            Math_ApproachF(&this->subCamEye.y, player->actor.world.pos.y, 0.1f, this->subCamFollowSpeed * 30.0f);
-            Math_ApproachF(&this->subCamEye.z, this->actor.world.pos.z + 45.0f + 40.0f, 0.1f,
-                           this->subCamFollowSpeed * 30.0f);
-            Math_ApproachF(&this->subCamFollowSpeed, 1.0f, 1.0f, 0.05f);
-            this->subCamAt.x = this->actor.world.pos.x;
-            this->subCamAt.y = this->actor.world.pos.y;
-            this->subCamAt.z = this->actor.world.pos.z;
-
-            if (this->framesUntilNextAction < 0) {
-                //! @bug ? unreachable, timer is >= 0
-                SkelAnime_Update(&this->skelanime);
-                Math_ApproachZeroF(&this->actor.speed, 1.0f, 2.0f);
-            } else {
-                BossGoma_UpdateCeilingMovement(this, play, 0.0f, -7.5f, false);
+            if (Animation_OnFrame(&this->skelanime, 36.0f)) {
+                this->eyeIrisScaleX = 1.8f;
+                this->eyeIrisScaleY = 1.8f;
             }
 
-            if (this->framesUntilNextAction == 0) {
-                Animation_Change(&this->skelanime, &gGohmaHangAnim, 1.0f, 0.0f, Animation_GetLastFrame(&gGohmaHangAnim),
-                                 ANIMMODE_LOOP, -5.0f);
-            }
-
-            if (this->framesUntilNextAction == 0) {
+            if (Animation_OnFrame(&this->skelanime, this->currentAnimFrameCount)) {
                 this->actionState = 9;
                 this->actor.speed = 0.0f;
                 this->actor.velocity.y = 0.0f;
                 this->actor.gravity = -2.0f;
+
+                this->subCamFollowSpeed = 1.0f;
+
                 Animation_Change(&this->skelanime, &gGohmaInitialLandingAnim, 1.0f, 0.0f,
-                                 Animation_GetLastFrame(&gGohmaInitialLandingAnim), ANIMMODE_ONCE, -5.0f);
+                                Animation_GetLastFrame(&gGohmaInitialLandingAnim), ANIMMODE_ONCE, -5.0f);
+
                 player->actor.world.pos.x = 0.0f;
                 player->actor.world.pos.z = -30.0f;
             }
+                
+            
             break;
 
         case 9: // falling from the ceiling
@@ -907,10 +855,13 @@ void BossGoma_Encounter(BossGoma* this, PlayState* play) {
                            this->subCamFollowSpeed * 30.0f);
             Math_ApproachF(&this->subCamEye.z, this->actor.world.pos.z + 45.0f + 40.0f, 0.1f,
                            this->subCamFollowSpeed * 30.0f);
+
             this->subCamAt.x = this->actor.world.pos.x;
             this->subCamAt.y = this->actor.world.pos.y;
             this->subCamAt.z = this->actor.world.pos.z;
+
             SkelAnime_Update(&this->skelanime);
+
             Math_ApproachS(&this->actor.shape.rot.x, 0, 2, 0xBB8);
             Math_ApproachS(&this->actor.world.rot.y, Actor_WorldYawTowardActor(&this->actor, &GET_PLAYER(play)->actor),
                            2, 0x7D0);
@@ -946,6 +897,12 @@ void BossGoma_Encounter(BossGoma* this, PlayState* play) {
                 this->subCamAt.y = this->framesUntilNextAction * s * 0.7f + this->actor.world.pos.y;
             } else {
                 Math_ApproachF(&this->subCamAt.y, this->actor.focus.pos.y, 0.1f, 10.0f);
+            }
+            
+            // (fq) requesting the same landing animation but 10 frames later, with some interpolation, to speed up the process
+            if (Animation_OnFrame(&this->skelanime, 20.0f)) {
+                Animation_Change(&this->skelanime, &gGohmaInitialLandingAnim, 1.0f, 30.0f,
+                                 Animation_GetLastFrame(&gGohmaInitialLandingAnim), ANIMMODE_ONCE, -5.0f);
             }
 
             if (Animation_OnFrame(&this->skelanime, 40.0f)) {

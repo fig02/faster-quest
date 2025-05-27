@@ -1,6 +1,7 @@
 #include "ultra64.h"
 #include "array_count.h"
 #include "controller.h"
+#include "seqcmd.h"
 #include "printf.h"
 #include "z64play.h"
 #include "z64player.h"
@@ -41,8 +42,8 @@ void DebugFq_SetSpawnPos(Player* player, PlayState* play) {
     }
 }
 
+// s32 sDebugEntrance = -1;
 s32 sDebugEntrance = -1;
-// s32 sDebugEntrance = ENTR_DEKU_TREE_0;
 
 s32 DebugFq_LoadToEntrance(GameState* gamestate) {
     if (sDebugEntrance >= 0) {
@@ -59,6 +60,8 @@ s32 DebugFq_LoadToEntrance(GameState* gamestate) {
         gSaveContext.save.info.playerData.magicLevel = gSaveContext.save.info.playerData.magic;
 
         gSaveContext.gameMode = GAMEMODE_NORMAL;
+
+        SEQCMD_RESET_AUDIO_HEAP(0, 10); // TODO why is there no sound????
 
         SET_NEXT_GAMESTATE(gamestate, Play_Init, PlayState);
 

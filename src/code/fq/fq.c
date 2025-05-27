@@ -9,4 +9,5 @@ FasterQuest gFQ;
 
 void FasterQuest_Init(void) {
     gFQ.cfg = gFQDefaultSettings;
+    gFQ.playerActionRequest = FQ_PLAYER_ACTION_NONE;
 }
