@@ -1260,9 +1260,12 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
     Vec3f childPos;
     s16 i;
 
+    // PRINTF("DEFAEAT TIMER %d\n", this->framesUntilNextAction);
+
     SkelAnime_Update(&this->skelanime);
     Math_ApproachS(&this->actor.shape.rot.x, 0, 2, 0xBB8);
 
+    // TODO find the right frame to do this
     if (Animation_OnFrame(&this->skelanime, 107.0f)) {
         BossGoma_PlayEffectsAndSfx(this, play, 0, 8);
         Rumble_Override(0.0f, 150, 20, 20);
@@ -1271,6 +1274,7 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
     this->visualState = VISUALSTATE_DEFEATED;
     this->eyeState = EYESTATE_IRIS_NO_FOLLOW_NO_IFRAMES;
 
+    // TODO what is this?
     if (this->framesUntilNextAction == 1001) {
         for (i = 0; i < 90; i++) {
             if (sDeadLimbLifetime[i] != 0) {
@@ -1279,6 +1283,7 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
         }
     }
 
+    // TODO find the right frame to do this (think its when she lunges forward?)
     if (this->framesUntilNextAction < 1200 && this->framesUntilNextAction > 1100 &&
         this->framesUntilNextAction % 8 == 0) {
         EffectSsSibuki_SpawnBurst(play, &this->actor.focus.pos);
@@ -1323,24 +1328,36 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
             Play_ChangeCameraStatus(play, CAM_ID_MAIN, CAM_STAT_UNK3);
             Play_ChangeCameraStatus(play, this->subCamId, CAM_STAT_ACTIVE);
             mainCam = Play_GetCamera(play, CAM_ID_MAIN);
+
+            // cutscene camera starts at main cam location
             this->subCamEye.x = mainCam->eye.x;
             this->subCamEye.y = mainCam->eye.y;
             this->subCamEye.z = mainCam->eye.z;
+
             this->subCamAt.x = mainCam->at.x;
             this->subCamAt.y = mainCam->at.y;
             this->subCamAt.z = mainCam->at.z;
+
             dx = this->subCamEye.x - this->actor.world.pos.x;
             dz = this->subCamEye.z - this->actor.world.pos.z;
             this->defeatedCameraEyeDist = sqrtf(SQ(dx) + SQ(dz));
             this->defeatedCameraEyeAngle = Math_FAtan2F(dx, dz);
-            this->timer = 270;
+
+            this->timer = 270; // what is this?
             break;
 
         case 1:
+            // link faces gohma when shes dying
             dx = Math_SinS(this->actor.shape.rot.y) * 100.0f;
             dz = Math_CosS(this->actor.shape.rot.y) * 100.0f;
             Math_ApproachF(&player->actor.world.pos.x, this->actor.world.pos.x + dx, 0.5f, 5.0f);
             Math_ApproachF(&player->actor.world.pos.z, this->actor.world.pos.z + dz, 0.5f, 5.0f);
+
+            // skip some of the "standing up" at the beginning of the death animation
+            if (Animation_OnFrame(&this->skelanime, 12.0f)) {
+                Animation_Change(&this->skelanime, &gGohmaDeathAnim, 1.0f, 86.0f, Animation_GetLastFrame(&gGohmaDeathAnim),
+                                 ANIMMODE_ONCE, -5.0f);
+            }
 
             if (this->framesUntilNextAction < 1080) {
                 this->noBackfaceCulling = true;
@@ -2167,6 +2184,12 @@ void BossGoma_Update(Actor* thisx, PlayState* play) {
     this->visualState = VISUALSTATE_DEFAULT;
     this->frameCount++;
 
+    #include "controller.h"
+    if (CHECK_BTN_ALL(play->state.input[0].press.button, BTN_L)) {
+        BossGoma_SetupDefeated(this, play);
+        Enemy_StartFinishingBlow(play, &this->actor);
+    }
+
     if (this->framesUntilNextAction != 0) {
         this->framesUntilNextAction--;
     }
@@ -2296,6 +2319,15 @@ s32 BossGoma_OverrideLimbDraw(PlayState* play, s32 limbIndex, Gfx** dList, Vec3f
 
             doNotDrawLimb = true;
             break;
+
+        case BOSSGOMA_LIMB_L_LEG_ROOT:
+            if (Animation_OnFrame(&this->skelanime, 10.0f)) {
+                rot->x = 0xFFFF;
+                rot->y = 0xFFFF;
+            }
+            PRINTF("frame:%f {%4X %4X %4X}\n", this->skelanime.curFrame, rot->x, rot->y, rot->z);
+            break;
+
     }
 
     CLOSE_DISPS(play->state.gfxCtx, "../z_boss_goma.c", 4858);
