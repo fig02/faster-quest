@@ -1356,7 +1356,7 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
             // skip some of the "standing up" at the beginning of the death animation
             if (Animation_OnFrame(&this->skelanime, 12.0f)) {
                 Animation_Change(&this->skelanime, &gGohmaDeathAnim, 1.0f, 86.0f, Animation_GetLastFrame(&gGohmaDeathAnim),
-                                 ANIMMODE_ONCE, -5.0f);
+                                 ANIMMODE_ONCE, -10.0f);
             }
 
             if (this->framesUntilNextAction < 1080) {
@@ -2321,10 +2321,22 @@ s32 BossGoma_OverrideLimbDraw(PlayState* play, s32 limbIndex, Gfx** dList, Vec3f
             break;
 
         case BOSSGOMA_LIMB_L_LEG_ROOT:
-            if (Animation_OnFrame(&this->skelanime, 10.0f)) {
-                rot->x = 0xFFFF;
-                rot->y = 0xFFFF;
+            if (this->actionFunc == BossGoma_DefeatedFq) {
+                static f32 sFrames[10] = {
+                    86.0f, 87.0f, 88.0f, 89.0f, 90.0f, 91.0f, 92.0f, 93.0f, 94.0f, 95.0f
+                };
+                s32 i;
+
+                for (i = 0; i < ARRAY_COUNT(sFrames); i++) {
+                    if (Animation_OnFrame(&this->skelanime, sFrames[i])) {
+                        rot->x += 0xFABB;
+                        rot->y = 0x0000;
+                        rot->z = 0x8000;
+                        break;
+                    }
+                }
             }
+
             PRINTF("frame:%f {%4X %4X %4X}\n", this->skelanime.curFrame, rot->x, rot->y, rot->z);
             break;
 
