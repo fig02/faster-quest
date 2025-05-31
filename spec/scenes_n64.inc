@@ -2877,6 +2877,7 @@ beginseg
     compress
     romalign 0x1000
     include "$(BUILD_DIR)/assets/scenes/dungeons/ydan_boss/ydan_boss_scene.o"
+    include "$(BUILD_DIR)/assets/scenes/gohma_boss/gohma.o"
     number 2
 endseg
 

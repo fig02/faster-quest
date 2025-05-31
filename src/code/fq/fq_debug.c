@@ -30,7 +30,7 @@ typedef struct DebugSpawn {
 
 // This is called in Player_Init
 void DebugFq_SetSpawnPos(Player* player, PlayState* play) {
-    // DebugSpawn entry = { SCENE_KOKIRI_FOREST, 1, { 2352.0f, -1.0f, -464.0f }, 0x51D5 };
+    // DebugSpawn entry = { SCENE_DEKU_TREE, 0, { 311.173004f, 360.000000f, 223.690872f}, 0x1E77 };
     DebugSpawn entry = { -1, 1, { 2352.0f, -1.0f, -464.0f }, 0x51D5 };
 
     if (entry.sceneId >= 0 && entry.sceneId == play->sceneId) {
@@ -38,12 +38,14 @@ void DebugFq_SetSpawnPos(Player* player, PlayState* play) {
         player->actor.home.pos = player->actor.world.pos;
         player->actor.world.rot.y = player->actor.shape.rot.y = entry.yaw;
 
-        sRequestedRoomNumber = entry.room;
+        if (play->roomCtx.curRoom.num != entry.room) {
+            sRequestedRoomNumber = entry.room;
+        }
     }
 }
 
-// s32 sDebugEntrance = -1;
-s32 sDebugEntrance = ENTR_DEKU_TREE_BOSS_0;
+s32 sDebugEntrance = -1;
+// s32 sDebugEntrance = ENTR_DEKU_TREE_BOSS_0;
 
 s32 DebugFq_LoadToEntrance(GameState* gamestate) {
     if (sDebugEntrance >= 0) {
@@ -62,6 +64,7 @@ s32 DebugFq_LoadToEntrance(GameState* gamestate) {
         gSaveContext.gameMode = GAMEMODE_NORMAL;
 
         SEQCMD_RESET_AUDIO_HEAP(0, 10); // TODO why is there no sound????
+        SEQCMD_SET_SEQPLAYER_VOLUME(SEQ_PLAYER_BGM_MAIN, 0, 10);
 
         SET_NEXT_GAMESTATE(gamestate, Play_Init, PlayState);
 

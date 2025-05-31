@@ -61,6 +61,7 @@ void BossGoma_Draw(Actor* thisx, PlayState* play);
 
 void BossGoma_SetupEncounter(BossGoma* this, PlayState* play);
 void BossGoma_EncounterFq(BossGoma* this, PlayState* play);
+void BossGoma_Defeated(BossGoma* this, PlayState* play);
 void BossGoma_DefeatedFq(BossGoma* this, PlayState* play);
 void BossGoma_FloorAttackPosture(BossGoma* this, PlayState* play);
 void BossGoma_FloorPrepareAttack(BossGoma* this, PlayState* play);
@@ -423,13 +424,18 @@ void BossGoma_Destroy(Actor* thisx, PlayState* play) {
     Collider_DestroyJntSph(play, &this->collider);
 }
 
+#include "assets/scenes/gohma_boss/gohma.h"
+
 /**
  * When Gohma is hit and its health drops to 0
  */
 void BossGoma_SetupDefeated(BossGoma* this, PlayState* play) {
-    Animation_Change(&this->skelanime, &gGohmaDeathAnim, 1.0f, 0.0f, Animation_GetLastFrame(&gGohmaDeathAnim),
+    Animation_Change(&this->skelanime, &gAltGohmaDeathAnim, 1.0f, 0.0f, Animation_GetLastFrame(&gAltGohmaDeathAnim),
                      ANIMMODE_ONCE, -2.0f);
     this->actionFunc = BossGoma_DefeatedFq;
+    // Animation_Change(&this->skelanime, &gGohmaDeathAnim, 1.0f, 0.0f, Animation_GetLastFrame(&gGohmaDeathAnim),
+    //                  ANIMMODE_ONCE, -2.0f);
+    // this->actionFunc = BossGoma_Defeated;
     this->disableGameplayLogic = true;
     this->decayingProgress = 0;
     this->noBackfaceCulling = false;
@@ -438,8 +444,9 @@ void BossGoma_SetupDefeated(BossGoma* this, PlayState* play) {
     this->actor.flags &= ~(ACTOR_FLAG_ATTENTION_ENABLED | ACTOR_FLAG_HOSTILE);
     this->actor.speed = 0.0f;
     this->actor.shape.shadowScale = 0.0f;
+    this->invincibilityFrames = 0;
     SEQCMD_STOP_SEQUENCE(SEQ_PLAYER_BGM_MAIN, 1);
-    Actor_PlaySfx(&this->actor, NA_SE_EN_GOMA_DEAD);
+    Actor_PlaySfx(&this->actor, NA_SE_EN_GOMA_CRY1);
 }
 
 /**
@@ -742,14 +749,15 @@ void BossGoma_EncounterFq(BossGoma* this, PlayState* play) {
             player->actor.speed = 0.0f;
             
             // cam eye near player
-            this->subCamEye.x = 115.0f;
+            this->subCamEye.x = player->actor.world.pos.x - 80.0f;
             this->subCamEye.y = -640.0f + 40.0f;
-            this->subCamEye.z = 158.0f;
+            this->subCamEye.z = player->actor.world.pos.z - 130.0f;
 
             // below room entrance
             this->subCamAt.x = player->actor.world.pos.x;
             this->subCamAt.y = player->actor.world.pos.y + 25.0f;
             this->subCamAt.z = player->actor.world.pos.z;
+            
             this->framesUntilNextAction = 50;
             this->timer = 80;
             this->frameCount = 0;
@@ -759,7 +767,7 @@ void BossGoma_EncounterFq(BossGoma* this, PlayState* play) {
             Math_ApproachF(&this->subCamEye.x, player->actor.world.pos.x - 20.0f, 0.05f, this->subCamFollowSpeed * 50.0f);
             Math_ApproachF(&this->subCamEye.y, player->actor.world.pos.y + 25.0f, 0.1f, this->subCamFollowSpeed * 130.0f);
             Math_ApproachF(&this->subCamEye.z, player->actor.world.pos.z - 65.0f, 0.05f, this->subCamFollowSpeed * 30.0f);
-            Math_ApproachF(&this->subCamFollowSpeed, 0.3f, 1.0f, 0.001f);
+            Math_ApproachF(&this->subCamFollowSpeed, 0.3f, 1.0f, 0.0005f);
 
             Play_SetCameraAtEye(play, CAM_ID_MAIN, &this->subCamAt, &this->subCamEye);
 
@@ -1260,21 +1268,27 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
     Vec3f childPos;
     s16 i;
 
-    // PRINTF("DEFAEAT TIMER %d\n", this->framesUntilNextAction);
-
     SkelAnime_Update(&this->skelanime);
     Math_ApproachS(&this->actor.shape.rot.x, 0, 2, 0xBB8);
+    
+    PRINTF("timer:%d inv:%d state:%d\n", this->framesUntilNextAction, this->invincibilityFrames, this->actionState);
 
-    // TODO find the right frame to do this
-    if (Animation_OnFrame(&this->skelanime, 107.0f)) {
+    // dust after slamming into the ground
+    if (Animation_OnFrame(&this->skelanime, 38.0f)) {
         BossGoma_PlayEffectsAndSfx(this, play, 0, 8);
         Rumble_Override(0.0f, 150, 20, 20);
+        SEQCMD_PLAY_SEQUENCE(SEQ_PLAYER_BGM_MAIN, 0, 0, NA_BGM_BOSS_CLEAR);
+    }
+
+    // victory music
+    if (Animation_OnFrame(&this->skelanime, 43.0f)) {
+        SEQCMD_PLAY_SEQUENCE(SEQ_PLAYER_BGM_MAIN, 0, 0, NA_BGM_BOSS_CLEAR);
     }
 
     this->visualState = VISUALSTATE_DEFEATED;
     this->eyeState = EYESTATE_IRIS_NO_FOLLOW_NO_IFRAMES;
 
-    // TODO what is this?
+    // gohma starts falling apart
     if (this->framesUntilNextAction == 1001) {
         for (i = 0; i < 90; i++) {
             if (sDeadLimbLifetime[i] != 0) {
@@ -1284,16 +1298,15 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
     }
 
     // TODO find the right frame to do this (think its when she lunges forward?)
-    if (this->framesUntilNextAction < 1200 && this->framesUntilNextAction > 1100 &&
+    if (this->framesUntilNextAction < 1140 && this->framesUntilNextAction > 1100 &&
         this->framesUntilNextAction % 8 == 0) {
         EffectSsSibuki_SpawnBurst(play, &this->actor.focus.pos);
     }
 
-    if (this->framesUntilNextAction < 1080 && this->actionState < 3) {
-        if (this->framesUntilNextAction < 1070) {
-            Actor_PlaySfx(&this->actor, NA_SE_EN_GOMA_LAST - SFX_FLAG);
-        }
+    if (this->framesUntilNextAction < 1150 && this->actionState <= 3) {
+        Actor_PlaySfx(&this->actor, NA_SE_EN_GOMA_LAST - SFX_FLAG);
 
+        // dust/blue fire thing
         for (i = 0; i < 4; i++) {
             //! @bug this 0-indexes into this->defeatedLimbPositions which is initialized with
             //! this->defeatedLimbPositions[limb], but limb is 1-indexed in skelanime callbacks, this means effects
@@ -1307,6 +1320,7 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
             }
         }
 
+        // dirt fragments
         for (i = 0; i < 15; i++) {
             //! @bug same as above
             j = (s16)(Rand_ZeroOne() * (BOSSGOMA_LIMB_MAX - 1));
@@ -1343,7 +1357,7 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
             this->defeatedCameraEyeDist = sqrtf(SQ(dx) + SQ(dz));
             this->defeatedCameraEyeAngle = Math_FAtan2F(dx, dz);
 
-            this->timer = 270; // what is this?
+            this->timer = 60; // this controls the victory bgm and when action state 2 starts + spawning heart container
             break;
 
         case 1:
@@ -1353,16 +1367,10 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
             Math_ApproachF(&player->actor.world.pos.x, this->actor.world.pos.x + dx, 0.5f, 5.0f);
             Math_ApproachF(&player->actor.world.pos.z, this->actor.world.pos.z + dz, 0.5f, 5.0f);
 
-            // skip some of the "standing up" at the beginning of the death animation
-            if (Animation_OnFrame(&this->skelanime, 12.0f)) {
-                Animation_Change(&this->skelanime, &gGohmaDeathAnim, 1.0f, 86.0f, Animation_GetLastFrame(&gGohmaDeathAnim),
-                                 ANIMMODE_ONCE, -10.0f);
-            }
-
-            if (this->framesUntilNextAction < 1080) {
+            if (this->framesUntilNextAction < 1150) {
                 this->noBackfaceCulling = true;
 
-                for (i = 0; i < 4; i++) {
+                for (i = 0; i < 8; i++) {
                     BossGoma_ClearPixels(sClearPixelTableFirstPass, this->decayingProgress);
                     //! @bug this allows this->decayingProgress = 0x100 = 256 which
                     //! is out of bounds when accessing sClearPixelTableFirstPass
@@ -1372,31 +1380,32 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
                 }
             }
 
-            if (this->framesUntilNextAction < 1070 && this->frameCount % 4 == 0 && Rand_ZeroOne() < 0.5f) {
-                this->blinkTimer = 3;
+            if (this->skelanime.curFrame <= 18.0f) {
+                this->defeatedCameraEyeAngle += 0.022f;
+            } else {
+                this->defeatedCameraEyeAngle += 0.0022f;
             }
 
-            this->defeatedCameraEyeAngle += 0.022f;
             Math_ApproachF(&this->defeatedCameraEyeDist, 150.0f, 0.1f, 5.0f);
+
             dx = sinf(this->defeatedCameraEyeAngle);
             dx = dx * this->defeatedCameraEyeDist;
+
             dz = cosf(this->defeatedCameraEyeAngle);
             dz = dz * this->defeatedCameraEyeDist;
+
             Math_SmoothStepToF(&this->subCamEye.x, this->actor.world.pos.x + dx, 0.2f, 50.0f, 0.1f);
             Math_SmoothStepToF(&this->subCamEye.y, this->actor.world.pos.y + 20.0f, 0.2f, 50.0f, 0.1f);
             Math_SmoothStepToF(&this->subCamEye.z, this->actor.world.pos.z + dz, 0.2f, 50.0f, 0.1f);
+
             Math_SmoothStepToF(&this->subCamAt.x, this->firstTailLimbWorldPos.x, 0.2f, 50.0f, 0.1f);
             Math_SmoothStepToF(&this->subCamAt.y, this->actor.focus.pos.y, 0.5f, 100.0f, 0.1f);
             Math_SmoothStepToF(&this->subCamAt.z, this->firstTailLimbWorldPos.z, 0.2f, 50.0f, 0.1f);
 
-            if (this->timer == 80) {
-                SEQCMD_PLAY_SEQUENCE(SEQ_PLAYER_BGM_MAIN, 0, 0, NA_BGM_BOSS_CLEAR);
-            }
-
             if (this->timer == 0) {
                 this->actionState = 2;
                 Play_ChangeCameraStatus(play, CAM_ID_MAIN, CAM_STAT_UNK3);
-                this->timer = 70;
+                this->timer = 30;
                 this->decayingProgress = 0;
                 this->subCamFollowSpeed = 0.0f;
                 Actor_Spawn(&play->actorCtx, play, ACTOR_ITEM_B_HEART, this->actor.world.pos.x, this->actor.world.pos.y,
@@ -1416,7 +1425,7 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
 
             if (this->timer == 0) {
                 childPos = roomCenter;
-                this->timer = 30;
+                this->timer = 10;
                 this->actionState = 3;
 
                 for (i = 0; i < 10000; i++) {
@@ -1436,7 +1445,7 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
                 Flags_SetClear(play, play->roomCtx.curRoom.num);
             }
 
-            for (i = 0; i < 4; i++) {
+            for (i = 0; i < 8; i++) {
                 BossGoma_ClearPixels(sClearPixelTableSecondPass, this->decayingProgress);
                 //! @bug same as sClearPixelTableFirstPass
                 if (this->decayingProgress < 0x100) {
@@ -1446,16 +1455,16 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
             break;
 
         case 3:
-            for (i = 0; i < 4; i++) {
+            for (i = 0; i < 8; i++) {
                 BossGoma_ClearPixels(sClearPixelTableSecondPass, this->decayingProgress);
                 //! @bug same as sClearPixelTableFirstPass
                 if (this->decayingProgress < 0x100) {
                     this->decayingProgress++;
                 }
             }
+            Math_SmoothStepToF(&this->actor.scale.y, 0, 1.0f, 0.00075f, 0.0f);
 
             if (this->timer == 0) {
-                if (Math_SmoothStepToF(&this->actor.scale.y, 0, 1.0f, 0.00075f, 0.0f) <= 0.001f) {
                     mainCam = Play_GetCamera(play, CAM_ID_MAIN);
                     mainCam->eye = this->subCamEye;
                     mainCam->eyeNext = this->subCamEye;
@@ -1468,7 +1477,7 @@ void BossGoma_DefeatedFq(BossGoma* this, PlayState* play) {
                 }
 
                 this->actor.scale.x = this->actor.scale.z = this->actor.scale.y;
-            }
+            //}
             break;
     }
 
@@ -2108,12 +2117,12 @@ void BossGoma_UpdateHit(BossGoma* this, PlayState* play) {
                     Actor_PlaySfx(&this->actor, NA_SE_EN_GOMA_DAM1);
                     BossGoma_SetupFloorDamaged(this);
                     EffectSsSibuki_SpawnBurst(play, &this->actor.focus.pos);
+                    this->invincibilityFrames = 10;
                 } else {
                     BossGoma_SetupDefeated(this, play);
                     Enemy_StartFinishingBlow(play, &this->actor);
                 }
 
-                this->invincibilityFrames = 10;
             } else if (this->actionFunc != BossGoma_FloorStunned && this->patienceTimer != 0 &&
                        (acHitElem->atDmgInfo.dmgFlags & (DMG_SLINGSHOT | DMG_DEKU_NUT))) {
                 Actor_PlaySfx(&this->actor, NA_SE_EN_GOMA_DAM2);
@@ -2183,12 +2192,6 @@ void BossGoma_Update(Actor* thisx, PlayState* play) {
 
     this->visualState = VISUALSTATE_DEFAULT;
     this->frameCount++;
-
-    #include "controller.h"
-    if (CHECK_BTN_ALL(play->state.input[0].press.button, BTN_L)) {
-        BossGoma_SetupDefeated(this, play);
-        Enemy_StartFinishingBlow(play, &this->actor);
-    }
 
     if (this->framesUntilNextAction != 0) {
         this->framesUntilNextAction--;
@@ -2319,27 +2322,6 @@ s32 BossGoma_OverrideLimbDraw(PlayState* play, s32 limbIndex, Gfx** dList, Vec3f
 
             doNotDrawLimb = true;
             break;
-
-        case BOSSGOMA_LIMB_L_LEG_ROOT:
-            if (this->actionFunc == BossGoma_DefeatedFq) {
-                static f32 sFrames[10] = {
-                    86.0f, 87.0f, 88.0f, 89.0f, 90.0f, 91.0f, 92.0f, 93.0f, 94.0f, 95.0f
-                };
-                s32 i;
-
-                for (i = 0; i < ARRAY_COUNT(sFrames); i++) {
-                    if (Animation_OnFrame(&this->skelanime, sFrames[i])) {
-                        rot->x += 0xFABB;
-                        rot->y = 0x0000;
-                        rot->z = 0x8000;
-                        break;
-                    }
-                }
-            }
-
-            PRINTF("frame:%f {%4X %4X %4X}\n", this->skelanime.curFrame, rot->x, rot->y, rot->z);
-            break;
-
     }
 
     CLOSE_DISPS(play->state.gfxCtx, "../z_boss_goma.c", 4858);

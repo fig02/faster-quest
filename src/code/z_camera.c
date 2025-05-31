@@ -5932,6 +5932,8 @@ s32 Camera_Demo3(Camera* camera) {
 
     sCameraInterfaceField = roData->interfaceField;
 
+    PRINTF(VT_COL(RED, WHITE)"cam state:%d\n"VT_RST, camera->animState);
+
     switch (camera->animState) {
         case 0:
             camera->stateFlags &= ~(CAM_STATE_CHECK_BG | CAM_STATE_EXTERNAL_FINISHED);
@@ -6075,7 +6077,7 @@ s32 Camera_Demo3(Camera* camera) {
             break;
     }
 
-    rwData->animFrame++;
+    rwData->animFrame += 1;
 
     if (rwData->animFrame == 1) {
         camera->animState = 10;

@@ -47,7 +47,7 @@ void FqCs_DekuTreeIntroSkip(PlayState* play, Player* player) {
     // Due to where this function call happens, link takes a step and moves 3 units.
     // To land at 597, set it to 600
     // TODO any better solution that isnt garbage???
-    FqCs_SetPlayerPosYaw(player, -4.0f, 0.0f, 600.0f, 0x8000, true);
+    // FqCs_SetPlayerPosYaw(player, -4.0f, 0.0f, 600.0f, 0x8000, true);
     gFQ.playerActionRequest = FQ_PLAYER_ACTION_IDLE;
 }
 
