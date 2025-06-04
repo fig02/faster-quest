@@ -2,7 +2,7 @@
 #include "setup_state.h"
 #include "printf.h"
 #include "translation.h"
-#include "z64save.h"
+#include "save.h"
 
 #include "fq/debug.h"
 

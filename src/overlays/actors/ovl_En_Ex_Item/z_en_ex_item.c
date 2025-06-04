@@ -17,10 +17,10 @@
 #include "terminal.h"
 #include "translation.h"
 #include "z_lib.h"
-#include "z64draw.h"
-#include "z64play.h"
-#include "z64player.h"
-#include "z64save.h"
+#include "draw.h"
+#include "play_state.h"
+#include "player.h"
+#include "save.h"
 
 #include "assets/objects/gameplay_keep/gameplay_keep.h"
 
@@ -122,7 +122,7 @@ void EnExItem_Init(Actor* thisx, PlayState* play) {
         this->actor.draw = NULL;
         if (this->requiredObjectSlot < 0) {
             Actor_Kill(&this->actor);
-            PRINTF(T("なにみの？ %d\n", "What's that? %d\n"), this->actor.params);
+            PRINTF(T("なにみの？ %d\n", "What? %d\n"), this->actor.params);
             PRINTF(VT_FGCOL(MAGENTA) T(" バンクおかしいしぞ！%d\n", " The bank is weird!%d\n") VT_RST "\n",
                    this->actor.params);
             return;

@@ -3,9 +3,9 @@
 #include "sequence.h"
 #include "versions.h"
 #include "z_locale.h"
-#include "z64environment.h"
-#include "z64save.h"
-#include "z64transition.h"
+#include "environment.h"
+#include "save.h"
+#include "transition.h"
 
 #include "fq/fq.h"
 

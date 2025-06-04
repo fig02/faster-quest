@@ -21,11 +21,11 @@
 #include "terminal.h"
 #include "translation.h"
 #include "z_lib.h"
-#include "z64audio.h"
-#include "z64effect.h"
-#include "z64play.h"
-#include "z64save.h"
-#include "z64skin_matrix.h"
+#include "audio.h"
+#include "effect.h"
+#include "play_state.h"
+#include "save.h"
+#include "skin_matrix.h"
 
 #include "assets/objects/object_xc/object_xc.h"
 #include "assets/scenes/overworld/spot05/spot05_scene.h"
@@ -376,10 +376,10 @@ void EnXc_SetupSerenadeAction(EnXc* this, PlayState* play) {
         s32 pad;
 
         this->action = SHEIK_ACTION_SERENADE;
-        PRINTF("水のセレナーデ シーク誕生!!!!!!!!!!!!!!!!!!\n");
+        PRINTF(T("水のセレナーデ シーク誕生!!!!!!!!!!!!!!!!!!\n", "Water serenade Sheik's birth!!!!!!!!!!!!!!!!!!\n"));
     } else {
         Actor_Kill(&this->actor);
-        PRINTF("水のセレナーデ シーク消滅!!!!!!!!!!!!!!!!!!\n");
+        PRINTF(T("水のセレナーデ シーク消滅!!!!!!!!!!!!!!!!!!\n", "Water serenade Sheik vanishes!!!!!!!!!!!!!!!!!!\n"));
     }
 }
 
@@ -396,10 +396,10 @@ s32 EnXc_SerenadeCS(EnXc* this, PlayState* play) {
             gSaveContext.cutsceneTrigger = 1;
             SET_EVENTCHKINF(EVENTCHKINF_52); // Learned Serenade of Water Flag
             Item_Give(play, ITEM_SONG_SERENADE);
-            PRINTF("ブーツを取った!!!!!!!!!!!!!!!!!!\n");
+            PRINTF(T("ブーツを取った!!!!!!!!!!!!!!!!!!\n", "I took the boots!!!!!!!!!!!!!!!!!!\n"));
             return true;
         } else {
-            PRINTF("はやくブーツを取るべし!!!!!!!!!!!!!!!!!!\n");
+            PRINTF(T("はやくブーツを取るべし!!!!!!!!!!!!!!!!!!\n", "Quickly get your boots!!!!!!!!!!!!!!!!!!\n"));
             return false;
         }
     }
@@ -2402,7 +2402,8 @@ void EnXc_Init(Actor* thisx, PlayState* play) {
             break;
 #endif
         default:
-            PRINTF(VT_FGCOL(RED) " En_Oa2 の arg_data がおかしい!!!!!!!!!!!!!!!!!!!!!!!!!\n" VT_RST);
+            PRINTF(VT_FGCOL(RED) T(" En_Oa2 の arg_data がおかしい!!!!!!!!!!!!!!!!!!!!!!!!!\n",
+                                   " En_Oa2 arg_data is wrong!!!!!!!!!!!!!!!!!!!!!!!!!\n") VT_RST);
             EnXc_DoNothing(this, play);
     }
 }

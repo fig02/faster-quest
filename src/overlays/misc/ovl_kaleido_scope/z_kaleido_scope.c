@@ -20,12 +20,13 @@
 #include "sys_matrix.h"
 #include "terminal.h"
 #include "title_setup_state.h"
+#include "translation.h"
 #include "versions.h"
-#include "z64audio.h"
-#include "z64ocarina.h"
-#include "z64play.h"
-#include "z64player.h"
-#include "z64save.h"
+#include "audio.h"
+#include "ocarina.h"
+#include "play_state.h"
+#include "player.h"
+#include "save.h"
 
 #include "assets/textures/icon_item_static/icon_item_static.h"
 #include "assets/textures/icon_item_24_static/icon_item_24_static.h"
@@ -1102,9 +1103,9 @@ void KaleidoScope_SetupPageSwitch(PauseContext* pauseCtx, u8 pt) {
 }
 
 void KaleidoScope_HandlePageToggles(PauseContext* pauseCtx, Input* input) {
-    if ((pauseCtx->debugState == 0) && CHECK_BTN_ALL(input->press.button, BTN_L)) {
+    if ((pauseCtx->debugState == PAUSE_DEBUG_STATE_CLOSED) && CHECK_BTN_ALL(input->press.button, BTN_L)) {
 #if DEBUG_FEATURES
-        pauseCtx->debugState = 1;
+        pauseCtx->debugState = PAUSE_DEBUG_STATE_INVENTORY_EDITOR_OPENING;
 #endif
         return;
     }
@@ -1910,8 +1911,9 @@ void KaleidoScope_DrawInfoPanel(PlayState* play) {
         if (pauseCtx->pageIndex == PAUSE_MAP) {
             if (YREG(7) != 0) {
                 PRINTF_COLOR_YELLOW();
-                PRINTF("キンスタ数(%d) Get_KIN_STA=%x (%x)  (%x)\n", YREG(6), GET_GS_FLAGS(YREG(6)),
-                       gAreaGsFlags[YREG(6)], gSaveContext.save.info.gsFlags[YREG(6) >> 2]);
+                PRINTF(T("キンスタ数(%d) Get_KIN_STA=%x (%x)  (%x)\n", "Kinsta Count(%d) Get_KIN_STA=%x (%x)  (%x)\n"),
+                       YREG(6), GET_GS_FLAGS(YREG(6)), gAreaGsFlags[YREG(6)],
+                       gSaveContext.save.info.gsFlags[YREG(6) >> 2]);
                 PRINTF_RST();
 
                 YREG(7) = 0;
@@ -3395,7 +3397,7 @@ void KaleidoScope_Draw(PlayState* play) {
     gSPSegment(POLY_OPA_DISP++, 0x0C, pauseCtx->iconItemAltSegment);
     gSPSegment(POLY_OPA_DISP++, 0x0D, pauseCtx->iconItemLangSegment);
 
-    if (pauseCtx->debugState == 0) {
+    if (pauseCtx->debugState == PAUSE_DEBUG_STATE_CLOSED) {
         KaleidoScope_SetView(pauseCtx, pauseCtx->eye.x, pauseCtx->eye.y, pauseCtx->eye.z);
 
         Gfx_SetupDL_42Opa(play->state.gfxCtx);
@@ -3417,8 +3419,9 @@ void KaleidoScope_Draw(PlayState* play) {
         KaleidoScope_DrawGameOver(play);
     }
 
-    if ((pauseCtx->debugState == 1) || (pauseCtx->debugState == 2)) {
-        KaleidoScope_DrawDebugEditor(play);
+    if ((pauseCtx->debugState == PAUSE_DEBUG_STATE_INVENTORY_EDITOR_OPENING) ||
+        (pauseCtx->debugState == PAUSE_DEBUG_STATE_INVENTORY_EDITOR_OPEN)) {
+        KaleidoScope_DrawInventoryEditor(play);
     }
 
     CLOSE_DISPS(play->state.gfxCtx, "../z_kaleido_scope_PAL.c", 3254);
@@ -3681,7 +3684,7 @@ void KaleidoScope_Update(PlayState* play) {
             pauseCtx->playerSegment = (void*)(((uintptr_t)play->objectCtx.spaceStart + 0x30) & ~0x3F);
 
             size1 = Player_InitPauseDrawData(play, pauseCtx->playerSegment, &pauseCtx->playerSkelAnime);
-            PRINTF("プレイヤー size1＝%x\n", size1);
+            PRINTF(T("プレイヤー size1＝%x\n", "Player size1=%x\n"), size1);
 
             size0 = (uintptr_t)_icon_item_staticSegmentRomEnd - (uintptr_t)_icon_item_staticSegmentRomStart;
             pauseCtx->iconItemSegment = (void*)ALIGN16((uintptr_t)pauseCtx->playerSegment + size1);
@@ -3784,10 +3787,10 @@ void KaleidoScope_Update(PlayState* play) {
 
             pauseCtx->nameSegment = (void*)ALIGN16((uintptr_t)pauseCtx->iconItemLangSegment + size);
 
-            PRINTF("サイズ＝%x\n", size2 + size1 + size0 + size);
+            PRINTF(T("サイズ＝%x\n", "size=%x\n"), size2 + size1 + size0 + size);
             PRINTF("item_name I_N_PT=%x\n", 0x800);
             Interface_SetDoAction(play, DO_ACTION_DECIDE);
-            PRINTF("サイズ＝%x\n", size2 + size1 + size0 + size + 0x800);
+            PRINTF(T("サイズ＝%x\n", "size=%x\n"), size2 + size1 + size0 + size + 0x800);
 
             if (((void)0, gSaveContext.worldMapArea) < WORLD_MAP_AREA_MAX) {
 #if OOT_NTSC
@@ -4310,7 +4313,7 @@ void KaleidoScope_Update(PlayState* play) {
                             pauseCtx->alpha = 0;
                         }
                     } else {
-                        pauseCtx->debugState = 0;
+                        pauseCtx->debugState = PAUSE_DEBUG_STATE_CLOSED;
                         pauseCtx->state = PAUSE_STATE_RESUME_GAMEPLAY;
                         pauseCtx->itemPagePitch = pauseCtx->equipPagePitch = pauseCtx->mapPagePitch =
                             pauseCtx->questPagePitch = 160.0f;
@@ -4653,7 +4656,7 @@ void KaleidoScope_Update(PlayState* play) {
                     pauseCtx->alpha = 0;
                 }
             } else {
-                pauseCtx->debugState = 0;
+                pauseCtx->debugState = PAUSE_DEBUG_STATE_CLOSED;
                 pauseCtx->state = PAUSE_STATE_RESUME_GAMEPLAY;
                 pauseCtx->questPagePitch = 160.0f;
                 pauseCtx->mapPagePitch = 160.0f;
